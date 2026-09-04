@@ -1,5 +1,5 @@
 
-  :root {
+   :root {
     --ink: #141414;
     --crest-red: #c8102e;
     --crest-red-deep: #7d0c1e;
@@ -17,10 +17,19 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    margin: 0; display: flex; flex-direction: column; min-height: 100vh;
+    margin: 0;
     padding-top: var(--nav-h);
     font-family: 'Work Sans', sans-serif; color: var(--charcoal); background: var(--paper);
     -webkit-font-smoothing: antialiased;
+  }
+ 
+  /* React rendert alles in #root - das ist jetzt der direkte Elternteil von
+     Navbar/main/Footer, deshalb muss der Flex-Container hier sitzen statt
+     auf body (das im HTML-Mockup noch direktes Elternteil war). */
+  #root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
   h1, h2, h3, .display { font-family: 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.08; margin: 0; }
   a { text-decoration: none; color: inherit; }
