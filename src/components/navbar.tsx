@@ -1,13 +1,21 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import type { LoggedInUser } from '../api/auth'
+ 
+interface NavbarProps {
+  currentUser: LoggedInUser | null
+  onLoginClick: () => void
+  onLogoutClick: () => void
+}
  
 /**
  * Navbar: sticky/fixed header with the club logo, page navigation and the
- * member login trigger. On mobile the nav links become a fullscreen drawer
- * toggled by the hamburger button (replaces the classList.toggle from the
- * HTML mockup with real React state).
+ * member login/logout trigger. On mobile the nav links become a fullscreen
+ * drawer toggled by the hamburger button. Shows "Mitglieder-Login" when
+ * logged out, "Abmelden" once currentUser is set (both in the mobile drawer
+ * and the desktop-only button).
  */
-function Navbar({ onLoginClick }: { onLoginClick: () => void }) {
+function Navbar({ currentUser, onLoginClick, onLogoutClick }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
  
@@ -16,6 +24,15 @@ function Navbar({ onLoginClick }: { onLoginClick: () => void }) {
   const closeMenu = () => setIsOpen(false)
  
   const isActive = (path: string) => location.pathname === path
+ 
+  const handleAuthClick = () => {
+    closeMenu()
+    if (currentUser) {
+      onLogoutClick()
+    } else {
+      onLoginClick()
+    }
+  }
  
   return (
     <header className="navbar">
@@ -66,25 +83,25 @@ function Navbar({ onLoginClick }: { onLoginClick: () => void }) {
                 Verein
               </Link>
             </li>
-            {/* Login button duplicated here for the mobile drawer - hidden on desktop via CSS */}
+            {/* Login/Logout button duplicated here for the mobile drawer - hidden on desktop via CSS */}
             <li>
               <button
-                className="btn-login"
-                onClick={() => {
-                  closeMenu()
-                  onLoginClick()
-                }}
+                className={`btn-login ${currentUser ? 'btn-logout' : ''}`}
+                onClick={handleAuthClick}
               >
-                Mitglieder-Login
+                {currentUser ? 'Abmelden' : 'Mitglieder-Login'}
               </button>
             </li>
           </ul>
         </nav>
  
-        {/* Desktop-only login button, shown next to the nav via CSS at >=1024px */}
+        {/* Desktop-only login/logout button, shown next to the nav via CSS at >=1024px */}
         <div className="nav-right-desktop">
-          <button className="btn-login" onClick={onLoginClick}>
-            Mitglieder-Login
+          <button
+            className={`btn-login ${currentUser ? 'btn-logout' : ''}`}
+            onClick={handleAuthClick}
+          >
+            {currentUser ? 'Abmelden' : 'Mitglieder-Login'}
           </button>
         </div>
  
@@ -102,3 +119,8 @@ function Navbar({ onLoginClick }: { onLoginClick: () => void }) {
  
 export default Navbar
  
+
+
+
+
+

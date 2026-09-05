@@ -1,5 +1,4 @@
-
-   :root {
+  :root {
     --ink: #141414;
     --crest-red: #c8102e;
     --crest-red-deep: #7d0c1e;
@@ -63,6 +62,10 @@
   /* ============ BUTTONS ============ */
   .btn-login { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid var(--crest-red); color: var(--white); background: transparent; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background var(--dur); }
   .btn-login:hover { background: var(--crest-red); }
+ 
+  /* Abmelden-Zustand: dauerhaft rot statt nur beim Hover */
+  .btn-logout { background: var(--crest-red); }
+  .btn-logout:hover { background: var(--crest-red-deep); border-color: var(--crest-red-deep); }
   .btn-primary { display: inline-flex; align-items: center; justify-content: center; padding: 13px 24px; border-radius: 999px; font-weight: 700; font-size: 15px; background: var(--crest-red); color: var(--white); border: none; cursor: pointer; transition: transform var(--dur), background var(--dur); }
   .btn-primary:hover { transform: translateY(-2px); background: var(--crest-red-deep); }
  
@@ -217,3 +220,5 @@
     .nav-links { transition: none; }
   }
  
+
+
