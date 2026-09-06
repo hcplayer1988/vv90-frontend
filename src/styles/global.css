@@ -220,5 +220,85 @@
     .nav-links { transition: none; }
   }
  
+  /* ================================================================ */
+  /* MEMBER AREA (logged-in section: topbar, sidebar, tabbar, cards)  */
+  /* ================================================================ */
+  :root {
+    --member-topbar-h: 58px;
+    --member-tabbar-h: 62px;
+  }
+ 
+  #member-app { display: flex; flex-direction: column; min-height: 100vh; }
+ 
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--member-topbar-h);
+    background: var(--ink); z-index: 70; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 16px;
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 8px; color: #fff; font-family: 'Anton', sans-serif; font-size: 15px; }
+  .topbar .brand svg { width: 24px; height: 24px; }
+ 
+  .user-menu { position: relative; }
+  .avatar-btn { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 4px; border-radius: 999px; cursor: pointer; }
+  .avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--crest-red); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .avatar-btn .chev { color: rgba(255,255,255,.6); font-size: 10px; }
+  .dropdown {
+    position: absolute; top: calc(100% + 10px); right: 0; width: 240px; background: #fff;
+    border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.2); overflow: hidden; z-index: 80;
+  }
+  .dropdown-head { padding: 14px 16px; border-bottom: 1px solid #eee; }
+  .dropdown-head .name { font-weight: 700; font-size: 14px; }
+  .dropdown-head .email { font-size: 12px; color: var(--muted); }
+  .role-badge {
+    display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    padding: 2px 9px; border-radius: 999px; background: rgba(200,16,46,.1); color: var(--crest-red-deep); text-transform: uppercase;
+  }
+  .role-badge.vorstand { background: var(--ink); color: #fff; }
+  .dropdown .item {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; border: none;
+    background: none; text-align: left; font-size: 13px; font-weight: 600; color: var(--charcoal); cursor: pointer;
+  }
+  .dropdown .item:hover { background: var(--paper-dim); }
+  .dropdown .item.danger { color: var(--crest-red-deep); }
+  .dropdown .divider { height: 1px; background: #eee; margin: 4px 0; }
+ 
+  .member-main { flex: 1 0 auto; width: 100%; padding-top: var(--member-topbar-h); padding-bottom: calc(var(--member-tabbar-h) + 16px); }
+  .member-main .main-inner { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
+ 
+  .tabbar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: var(--member-tabbar-h); background: #fff;
+    border-top: 1px solid #e4e0da; display: flex; z-index: 60; box-shadow: 0 -2px 8px rgba(0,0,0,.04);
+  }
+  .tabbar a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: var(--muted); font-size: 11px; font-weight: 600;
+  }
+  .tabbar a svg { width: 22px; height: 22px; }
+  .tabbar a.active { color: var(--crest-red); }
+ 
+  .member-sidebar { display: none; }
+ 
+  .member-card { background: #fff; border-radius: var(--radius); padding: 16px; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
+ 
+  @media (min-width: 1024px) {
+    :root { --member-topbar-h: 64px; }
+    .tabbar { display: none; }
+    #member-app { flex-direction: row; }
+    .member-sidebar {
+      display: flex; flex-direction: column; width: 230px; flex: none; background: var(--ink);
+      padding-top: var(--member-topbar-h); position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
+    }
+    .member-sidebar nav { display: flex; flex-direction: column; padding: 16px 12px; gap: 2px; }
+    .member-sidebar a {
+      display: flex; align-items: center; gap: 10px; padding: 11px 12px; color: rgba(255,255,255,.65);
+      font-size: 14px; font-weight: 600; border-radius: 8px;
+    }
+    .member-sidebar a svg { width: 18px; height: 18px; }
+    .member-sidebar a.active { background: rgba(200,16,46,.15); color: #fff; }
+    .member-sidebar a:hover:not(.active) { background: rgba(255,255,255,.06); }
+    .member-main { margin-left: 230px; padding-bottom: 24px; }
+    .member-main .main-inner { padding: 32px; }
+  }
+ 
 
 

@@ -1,14 +1,20 @@
 import api from './client'
  
-export interface LoginPayload {
-  email: string
-  password: string
+export interface Rolle {
+  id: number
+  name: string
 }
  
 export interface LoggedInUser {
   id: number
   email: string
   username: string
+  rollen?: Rolle[]
+}
+ 
+export interface LoginPayload {
+  email: string
+  password: string
 }
  
 export interface LoginResponse {
@@ -35,3 +41,15 @@ export async function logout(): Promise<void> {
   await api.post('/accounts/logout/')
 }
  
+/**
+ * Calls GET /api/accounts/me/. Used to check on app start whether the
+ * access_token cookie from a previous session is still valid - without
+ * this, currentUser would reset to null on every page reload even though
+ * the user is technically still logged in server-side.
+ */
+export async function getMe(): Promise<LoggedInUser> {
+  const response = await api.get<LoggedInUser>('/accounts/me/')
+  return response.data
+}
+ 
+
