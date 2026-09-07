@@ -12,6 +12,7 @@ import Verein from './pages/verein'
 import Dashboard from './pages/app/dashboard'
 import Termine from './pages/app/termine'
 import Forum from './pages/app/forum'
+import ForumThread from './pages/app/forumThread'
 import Verwaltung from './pages/app/verwaltung'
 import Profil from './pages/app/profil'
 import { getMe, logout, type LoggedInUser } from './api/auth'
@@ -151,6 +152,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="termine" element={<Termine />} />
           <Route path="forum" element={<Forum />} />
+          <Route path="forum/:id" element={<ForumThread />} />
           <Route path="verwaltung" element={<Verwaltung />} />
           <Route path="profil" element={<Profil />} />
         </Route>
