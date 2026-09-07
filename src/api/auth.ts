@@ -52,4 +52,11 @@ export async function getMe(): Promise<LoggedInUser> {
   return response.data
 }
  
+/** Checks whether the given user has the given role name (e.g. 'vorstand', 'admin'). */
+export function hasRole(user: LoggedInUser, roleName: string): boolean {
+  return user.rollen?.some((r) => r.name === roleName) ?? false
+}
+ 
+
+
 
