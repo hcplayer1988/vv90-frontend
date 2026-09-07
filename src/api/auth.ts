@@ -57,6 +57,42 @@ export function hasRole(user: LoggedInUser, roleName: string): boolean {
   return user.rollen?.some((r) => r.name === roleName) ?? false
 }
  
+export interface ProfilPayload {
+  first_name?: string
+  last_name?: string
+  strasse?: string
+  hausnummer?: string
+  plz?: string
+  ort?: string
+  geburtstag?: string | null
+}
+ 
+export interface FullProfil extends LoggedInUser {
+  first_name: string
+  last_name: string
+  strasse: string
+  hausnummer: string
+  plz: string
+  ort: string
+  geburtstag: string | null
+  full_name: string
+  full_address: string
+}
+ 
+/** Fetches the full profile (address, birthday etc.), not just the minimal
+ *  LoggedInUser shape used for the login/session state. */
+export async function getMyProfile(): Promise<FullProfil> {
+  const response = await api.get<FullProfil>('/accounts/me/')
+  return response.data
+}
+ 
+/** Updates the logged-in user's own profile data (not their roles - those
+ *  stay read-only for the user themselves, see UserSerializer on the backend). */
+export async function updateMyProfile(payload: ProfilPayload): Promise<FullProfil> {
+  const response = await api.patch<FullProfil>('/accounts/me/', payload)
+  return response.data
+}
+ 
 
 
 
