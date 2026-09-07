@@ -12,6 +12,7 @@ import {
   type WiederholungEinheit,
 } from '../../api/termine'
 import { hasRole, type LoggedInUser } from '../../api/auth'
+import { occursOnDay } from '../../utils/terminRecurrence'
  
 type OutletContext = { currentUser: LoggedInUser }
  
@@ -58,54 +59,6 @@ function formatDate(iso: string) {
     day: date.toLocaleDateString('de-DE', { day: '2-digit' }),
     month: date.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase(),
     time: date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-  }
-}
- 
-/** Strips the time portion so two dates can be compared by day only. */
-function atMidnight(date: Date): Date {
-  const copy = new Date(date)
-  copy.setHours(0, 0, 0, 0)
-  return copy
-}
- 
-function daysBetween(a: Date, b: Date): number {
-  const MS_PER_DAY = 1000 * 60 * 60 * 24
-  return Math.round((atMidnight(b).getTime() - atMidnight(a).getTime()) / MS_PER_DAY)
-}
- 
-/**
- * Checks whether a given Termin occurs on the given calendar day - either
- * because it's a one-off event on exactly that day, or because it's a
- * recurring event whose rule (unit + interval) produces an occurrence on
- * that day. This is pure frontend logic: the backend only stores the rule
- * (see Termin.recurrence_label), it doesn't generate individual rows.
- */
-function occursOnDay(termin: Termin, day: Date): boolean {
-  const start = new Date(termin.start)
- 
-  if (!termin.ist_wiederkehrend) {
-    return atMidnight(start).getTime() === atMidnight(day).getTime()
-  }
- 
-  if (day < atMidnight(start)) return false
-  if (termin.wiederholung_bis && atMidnight(day) > atMidnight(new Date(termin.wiederholung_bis))) {
-    return false
-  }
- 
-  const interval = termin.wiederholung_abstand ?? 1
- 
-  switch (termin.wiederholung_einheit) {
-    case 'tage':
-      return daysBetween(start, day) % interval === 0
-    case 'wochen':
-      return daysBetween(start, day) % (interval * 7) === 0
-    case 'monate': {
-      if (day.getDate() !== start.getDate()) return false
-      const monthDiff = (day.getFullYear() - start.getFullYear()) * 12 + (day.getMonth() - start.getMonth())
-      return monthDiff >= 0 && monthDiff % interval === 0
-    }
-    default:
-      return false
   }
 }
  
@@ -596,7 +549,7 @@ function Termine() {
 }
  
 export default Termine
- 
+  
 
 
 
