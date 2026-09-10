@@ -93,6 +93,26 @@ export async function updateMyProfile(payload: ProfilPayload): Promise<FullProfi
   return response.data
 }
  
-
-
+export interface ChangeCredentialsPayload {
+  current_password: string
+  new_email?: string
+  new_password?: string
+  confirm_new_password?: string
+}
+ 
+export interface ChangeCredentialsResponse {
+  detail: string
+}
+ 
+/** Calls POST /api/accounts/change-credentials/ to change the logged-in
+ *  user's own email and/or password, gated behind their current password.
+ *  Returns the backend's message, which differs depending on whether an
+ *  email change (pending confirmation) or just a password change happened. */
+export async function changeCredentials(
+  payload: ChangeCredentialsPayload
+): Promise<ChangeCredentialsResponse> {
+  const response = await api.post<ChangeCredentialsResponse>('/accounts/change-credentials/', payload)
+  return response.data
+}
+ 
 
