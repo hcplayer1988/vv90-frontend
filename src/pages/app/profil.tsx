@@ -7,6 +7,7 @@ import {
   type FullProfil,
   type ProfilPayload,
 } from '../../api/auth'
+import PasswordInput from '../../components/passwordInput'
  
 const EMPTY_FORM = {
   first_name: '',
@@ -261,33 +262,22 @@ function Profil() {
                   onChange={(e) => setCredentialsForm({ ...credentialsForm, new_email: e.target.value })}
                 />
               </div>
-              <div className="field-row">
-                <label>Neues Passwort (optional)</label>
-                <input
-                  type="password"
-                  value={credentialsForm.new_password}
-                  onChange={(e) => setCredentialsForm({ ...credentialsForm, new_password: e.target.value })}
-                />
-              </div>
-              <div className="field-row">
-                <label>Neues Passwort bestätigen</label>
-                <input
-                  type="password"
-                  value={credentialsForm.confirm_new_password}
-                  onChange={(e) =>
-                    setCredentialsForm({ ...credentialsForm, confirm_new_password: e.target.value })
-                  }
-                />
-              </div>
-              <div className="field-row">
-                <label>Aktuelles Passwort (zur Bestätigung erforderlich)</label>
-                <input
-                  type="password"
-                  required
-                  value={credentialsForm.current_password}
-                  onChange={(e) => setCredentialsForm({ ...credentialsForm, current_password: e.target.value })}
-                />
-              </div>
+              <PasswordInput
+                label="Neues Passwort (optional)"
+                value={credentialsForm.new_password}
+                onChange={(value) => setCredentialsForm({ ...credentialsForm, new_password: value })}
+              />
+              <PasswordInput
+                label="Neues Passwort bestätigen"
+                value={credentialsForm.confirm_new_password}
+                onChange={(value) => setCredentialsForm({ ...credentialsForm, confirm_new_password: value })}
+              />
+              <PasswordInput
+                label="Aktuelles Passwort (zur Bestätigung erforderlich)"
+                value={credentialsForm.current_password}
+                onChange={(value) => setCredentialsForm({ ...credentialsForm, current_password: value })}
+                required
+              />
  
               {credentialsError && (
                 <p style={{ fontSize: '13px', color: '#c8102e' }}>{credentialsError}</p>
@@ -308,7 +298,7 @@ function Profil() {
 }
  
 export default Profil
- 
+  
 
 
 

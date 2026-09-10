@@ -115,4 +115,13 @@ export async function changeCredentials(
   return response.data
 }
  
+/** Calls GET /api/accounts/email_change_confirm/<token>/ - the endpoint
+ *  the confirmation link in the email points to. This is the only place
+ *  where a pending email change actually becomes real. */
+export async function confirmEmailChange(token: string): Promise<{ detail: string }> {
+  const response = await api.get<{ detail: string }>(`/accounts/email_change_confirm/${token}/`)
+  return response.data
+}
+ 
+  
 

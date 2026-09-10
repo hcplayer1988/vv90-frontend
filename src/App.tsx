@@ -9,6 +9,7 @@ import Home from './pages/home'
 import Trainingszeiten from './pages/trainingszeiten'
 import Spielplan from './pages/spielplan'
 import Verein from './pages/verein'
+import EmailBestaetigen from './pages/emailBestaetigen'
 import Dashboard from './pages/app/dashboard'
 import Termine from './pages/app/termine'
 import Forum from './pages/app/forum'
@@ -130,6 +131,22 @@ function App() {
               />
               <main className="page-main">
                 <Verein />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/email-bestaetigen"
+          element={
+            <>
+              <Navbar
+                currentUser={currentUser}
+                onLoginClick={() => setIsLoginOpen(true)}
+                onLogoutClick={handleLogout}
+              />
+              <main className="page-main">
+                <EmailBestaetigen />
               </main>
               <Footer />
             </>

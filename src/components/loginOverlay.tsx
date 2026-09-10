@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { login, type LoggedInUser } from '../api/auth'
+import PasswordInput from './passwordInput'
  
 interface LoginOverlayProps {
   isOpen: boolean
@@ -9,10 +10,10 @@ interface LoginOverlayProps {
 }
  
 /**
- * LoginOverlay: modal for the member login form, now wired up against
- * POST /api/accounts/login/. Open/closed state still lives in App.tsx
- * (shared with Navbar's login button); only the form's own input/error/
- * loading state lives here, since nothing outside this component needs it.
+ * LoginOverlay: modal for the member login form, wired up against
+ * POST /api/accounts/login/. Open/closed state lives in App.tsx (shared
+ * with Navbar's login button); only the form's own input/error/loading
+ * state lives here, since nothing outside this component needs it.
  */
 function LoginOverlay({ isOpen, onClose, onLoginSuccess }: LoginOverlayProps) {
   const [email, setEmail] = useState('')
@@ -65,13 +66,12 @@ function LoginOverlay({ isOpen, onClose, onLoginSuccess }: LoginOverlayProps) {
             required
           />
  
-          <label htmlFor="password">Passwort</label>
-          <input
-            type="password"
+          <PasswordInput
             id="password"
-            placeholder="••••••••"
+            label="Passwort"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
+            placeholder="••••••••"
             required
           />
  
@@ -90,5 +90,3 @@ function LoginOverlay({ isOpen, onClose, onLoginSuccess }: LoginOverlayProps) {
  
 export default LoginOverlay
  
-
-
