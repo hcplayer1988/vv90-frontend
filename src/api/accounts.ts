@@ -1,4 +1,5 @@
 import api from './client'
+import type { Rolle } from './auth'
  
 /**
  * IMPORTANT: The backend's MitgliederManageSerializer uses a
@@ -26,7 +27,7 @@ export interface Mitglied {
  
 export type MitgliedPayload = Partial<
   Pick<Mitglied, 'first_name' | 'last_name' | 'strasse' | 'hausnummer' | 'plz' | 'ort' | 'geburtstag'>
->
+> & { rollen?: number[] }
  
 export async function listMitglieder(): Promise<Mitglied[]> {
   const response = await api.get<Mitglied[]>('/accounts/mitglieder/')
@@ -61,3 +62,15 @@ export interface InvitePayload {
 export async function inviteMitglied(payload: InvitePayload): Promise<void> {
   await api.post('/accounts/invite/', payload)
 }
+ 
+/** Calls GET /api/accounts/rollen/ - lists all roles with id and name, so
+ *  role IDs elsewhere (e.g. Mitglied.rollen) can be turned back into
+ *  readable names. Vorstand/Admin only, matching the backend permission. */
+export async function listRollen(): Promise<Rolle[]> {
+  const response = await api.get<Rolle[]>('/accounts/rollen/')
+  return response.data
+}
+ 
+
+
+

@@ -5,12 +5,13 @@ import {
   deleteMitglied,
   inviteMitglied,
   listMitglieder,
+  listRollen,
   reaktiviereMitglied,
   updateMitglied,
   type Mitglied,
   type MitgliedPayload,
 } from '../../api/accounts'
-import { hasRole, type LoggedInUser } from '../../api/auth'
+import { hasRole, type LoggedInUser, type Rolle } from '../../api/auth'
  
 type OutletContext = { currentUser: LoggedInUser }
  
@@ -28,6 +29,7 @@ const EMPTY_EDIT_FORM = {
   plz: '',
   ort: '',
   geburtstag: '',
+  rollenIds: [] as number[],
 }
  
 /**
@@ -43,6 +45,7 @@ function Verwaltung() {
   const [subtab, setSubtab] = useState<'mitglieder' | 'einladungen'>('mitglieder')
  
   const [mitglieder, setMitglieder] = useState<Mitglied[]>([])
+  const [rollen, setRollen] = useState<Rolle[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
  
@@ -62,13 +65,19 @@ function Verwaltung() {
     setIsLoading(true)
     setLoadError(null)
     try {
-      const data = await listMitglieder()
-      setMitglieder(data)
+      const [mitgliederData, rollenData] = await Promise.all([listMitglieder(), listRollen()])
+      setMitglieder(mitgliederData)
+      setRollen(rollenData)
     } catch {
       setLoadError('Mitgliederliste konnte nicht geladen werden.')
     } finally {
       setIsLoading(false)
     }
+  }
+ 
+  /** Turns a role ID (all Mitglied.rollen contains) into its readable name. */
+  function rolleName(id: number): string {
+    return rollen.find((r) => r.id === id)?.name ?? '—'
   }
  
   useEffect(() => {
@@ -91,8 +100,18 @@ function Verwaltung() {
       plz: mitglied.plz,
       ort: mitglied.ort,
       geburtstag: mitglied.geburtstag ?? '',
+      rollenIds: mitglied.rollen,
     })
     setEditError(null)
+  }
+ 
+  function toggleRole(roleId: number) {
+    setEditForm((prev) => ({
+      ...prev,
+      rollenIds: prev.rollenIds.includes(roleId)
+        ? prev.rollenIds.filter((id) => id !== roleId)
+        : [...prev.rollenIds, roleId],
+    }))
   }
  
   async function handleSaveEdit() {
@@ -106,6 +125,7 @@ function Verwaltung() {
       plz: editForm.plz,
       ort: editForm.ort,
       geburtstag: editForm.geburtstag || null,
+      rollen: editForm.rollenIds,
     }
     try {
       const updated = await updateMitglied(editingId, payload)
@@ -214,7 +234,7 @@ function Verwaltung() {
                     </div>
                     <div className="email">
                       {mitglied.email} ·{' '}
-                      {mitglied.rollen.length > 0 ? `${mitglied.rollen.length} Rolle(n)` : 'keine Rolle'}
+                      {mitglied.rollen.length > 0 ? mitglied.rollen.map(rolleName).join(', ') : 'keine Rolle'}
                       {!mitglied.is_active && ' · Deaktiviert'}
                     </div>
                   </div>
@@ -354,14 +374,21 @@ function Verwaltung() {
             />
           </div>
  
-          <div className="field-row">
-            <label>Rollen</label>
-            <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>
-              Rollen bearbeiten ist hier noch nicht möglich - dafür fehlt ein Backend-Endpoint, der
-              Rollen-IDs mit ihrem Namen verknüpft. Rollen lassen sich bis dahin im Django-Admin
-              zuweisen.
-            </p>
-          </div>
+          {rollen.length > 0 && (
+            <div className="field-row">
+              <label>Rollen</label>
+              {rollen.map((role) => (
+                <label key={role.id} className="checkbox-row" style={{ marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    checked={editForm.rollenIds.includes(role.id)}
+                    onChange={() => toggleRole(role.id)}
+                  />
+                  {role.name}
+                </label>
+              ))}
+            </div>
+          )}
  
           {editError && <p style={{ color: '#c8102e', fontSize: '13px' }}>{editError}</p>}
  
@@ -416,3 +443,5 @@ function Verwaltung() {
  
 export default Verwaltung
  
+
+
