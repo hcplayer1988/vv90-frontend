@@ -4,6 +4,7 @@ import {
   changeCredentials,
   getMyProfile,
   updateMyProfile,
+  uploadAvatar,
   type FullProfil,
   type ProfilPayload,
 } from '../../api/auth'
@@ -26,11 +27,15 @@ const EMPTY_CREDENTIALS_FORM = {
   confirm_new_password: '',
 }
  
+
+const MAX_AVATAR_SIZE_MB = 5
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+ 
 /**
  * Profil: self-service page for the logged-in member's own data. Address/
- * name/birthday editing (PATCH /accounts/me/) and email/password changes
- * (POST /accounts/change-credentials/) are both fully functional now.
- * Avatar upload is still UI-only - no backend endpoint exists for that yet.
+ * name/birthday editing (PATCH /accounts/me/), email/password changes
+ * (POST /accounts/change-credentials/) and avatar upload (PATCH /accounts/me/
+ * als multipart/form-data) sind jetzt alle voll funktional.
  */
 function Profil() {
   const [profil, setProfil] = useState<FullProfil | null>(null)
@@ -40,6 +45,9 @@ function Profil() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+ 
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
  
   const [isCredentialsSectionOpen, setIsCredentialsSectionOpen] = useState(false)
   const [credentialsForm, setCredentialsForm] = useState(EMPTY_CREDENTIALS_FORM)
@@ -62,9 +70,6 @@ function Profil() {
         ort: data.ort,
         geburtstag: data.geburtstag ?? '',
       })
-      // E-Mail-Feld im Zugangsdaten-Formular mit der aktuellen Adresse
-      // vorbelegen - die meisten werden hier nur das Passwort aendern wollen,
-      // die Passwort-Felder selbst bleiben bewusst leer.
       setCredentialsForm((prev) => ({ ...prev, new_email: data.email }))
     } catch {
       setLoadError('Profil konnte nicht geladen werden.')
@@ -77,6 +82,14 @@ function Profil() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfil()
   }, [])
+ 
+  function extractFirstError(err: unknown, fallback: string): string {
+    if (err instanceof AxiosError && err.response?.data) {
+      const firstError = Object.values(err.response.data)[0]
+      return Array.isArray(firstError) ? firstError[0] : String(firstError)
+    }
+    return fallback
+  }
  
   async function handleSave(event: React.FormEvent) {
     event.preventDefault()
@@ -103,12 +116,36 @@ function Profil() {
     }
   }
  
-  function extractFirstError(err: unknown, fallback: string): string {
-    if (err instanceof AxiosError && err.response?.data) {
-      const firstError = Object.values(err.response.data)[0]
-      return Array.isArray(firstError) ? firstError[0] : String(firstError)
+  /**
+   * NEU: Handles picking a new avatar file. Uploads immediately on
+   * selection (no separate "hochladen"-Klick noetig), mit sofortigem
+   * clientseitigem Check von Dateityp und -groesse fuer schnelles Feedback.
+   */
+  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+ 
+    setAvatarError(null)
+ 
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      setAvatarError('Nur JPEG-, PNG- oder WebP-Bilder sind erlaubt.')
+      return
     }
-    return fallback
+    if (file.size > MAX_AVATAR_SIZE_MB * 1024 * 1024) {
+      setAvatarError(`Das Bild darf maximal ${MAX_AVATAR_SIZE_MB}MB groß sein.`)
+      return
+    }
+ 
+    setIsUploadingAvatar(true)
+    try {
+      const updated = await uploadAvatar(file)
+      setProfil(updated)
+    } catch (err) {
+      setAvatarError(extractFirstError(err, 'Profilbild konnte nicht hochgeladen werden.'))
+    } finally {
+      setIsUploadingAvatar(false)
+    }
   }
  
   async function handleSaveCredentials(event: React.FormEvent) {
@@ -117,11 +154,6 @@ function Profil() {
     setCredentialsSuccess(null)
  
     const { current_password, new_email, new_password, confirm_new_password } = credentialsForm
-    // Die E-Mail ist mit der aktuellen Adresse vorbefuellt (Komfort fuer den
-    // haeufigen Fall "nur Passwort aendern") - zaehlt hier also nur als
-    // echte Aenderung, wenn sie sich tatsaechlich vom aktuellen Stand
-    // unterscheidet. Sonst wuerde ein reiner Passwort-Wechsel faelschlich
-    // auch einen E-Mail-Bestaetigungslink an die (unveraenderte) Adresse ausloesen.
     const emailChanged = profil !== null && new_email.trim() !== profil.email
     if (!emailChanged && !new_password) {
       setCredentialsError('Gib eine neue E-Mail-Adresse oder ein neues Passwort an.')
@@ -135,16 +167,8 @@ function Profil() {
         ...(emailChanged ? { new_email: new_email.trim() } : {}),
         ...(new_password ? { new_password, confirm_new_password } : {}),
       })
-      // Backend liefert je nach Fall eine unterschiedliche Meldung zurueck:
-      // bei einer E-Mail-Aenderung den Hinweis auf den noch ausstehenden
-      // Bestaetigungslink, sonst die einfache "gespeichert"-Bestaetigung.
-      // Die zeigen wir 1:1 an, statt sie mit einem eigenen Text zu ueberschreiben -
-      // so bleibt sichtbar, dass eine E-Mail-Aenderung noch NICHT sofort wirksam ist.
       setCredentialsSuccess(response.detail)
       setCredentialsForm({ ...EMPTY_CREDENTIALS_FORM, new_email: profil?.email ?? '' })
-      // Absichtlich KEIN lokales Update von profil.email mehr: die Aenderung
-      // ist ja noch gar nicht aktiv, bis der Bestaetigungslink geklickt wurde -
-      // die Anzeige soll also bewusst die bisherige E-Mail zeigen.
     } catch (err) {
       setCredentialsError(extractFirstError(err, 'Änderungen konnten nicht gespeichert werden.'))
     } finally {
@@ -166,18 +190,37 @@ function Profil() {
       </div>
  
       <div className="member-card">
-        {/* ===== Avatar (Platzhalter, Backend-Support fehlt noch) ===== */}
+        {/* ===== Avatar ===== */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-          <div className="avatar" style={{ width: '64px', height: '64px', fontSize: '20px' }}>
-            {profil.email.slice(0, 2).toUpperCase()}
-          </div>
+          {profil.avatar ? (
+            <img
+              src={profil.avatar}
+              alt="Profilbild"
+              className="avatar"
+              style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }}
+            />
+          ) : (
+            <div className="avatar" style={{ width: '64px', height: '64px', fontSize: '20px' }}>
+              {profil.email.slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <div>
-            <button className="btn-outline" disabled title="Kommt, sobald der Backend-Endpoint dafür existiert">
-              Profilbild hochladen
-            </button>
+            <label className="btn-outline" style={{ cursor: isUploadingAvatar ? 'default' : 'pointer' }}>
+              {isUploadingAvatar ? 'Lädt hoch …' : 'Profilbild hochladen'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarChange}
+                disabled={isUploadingAvatar}
+                style={{ display: 'none' }}
+              />
+            </label>
             <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>
-              Noch nicht verfügbar – kommt in einem späteren Update.
+              JPEG, PNG oder WebP, max. {MAX_AVATAR_SIZE_MB}MB.
             </p>
+            {avatarError && (
+              <p style={{ fontSize: '11px', color: '#c8102e', marginTop: '4px' }}>{avatarError}</p>
+            )}
           </div>
         </div>
  
@@ -313,7 +356,6 @@ function Profil() {
  
 export default Profil
  
-
 
 
 

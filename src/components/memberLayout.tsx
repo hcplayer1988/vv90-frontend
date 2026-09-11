@@ -78,7 +78,11 @@ function MemberLayout({ currentUser, onLogoutClick }: MemberLayoutProps) {
  
         <div className="user-menu" ref={dropdownRef}>
           <button className="avatar-btn" onClick={() => setIsDropdownOpen((prev) => !prev)}>
-            <span className="avatar">{initials}</span>
+            {currentUser.avatar ? (
+              <img src={currentUser.avatar} alt="" className="avatar" style={{ objectFit: 'cover' }} />
+            ) : (
+              <span className="avatar">{initials}</span>
+            )}
             <span className="chev">▾</span>
           </button>
  
@@ -149,5 +153,4 @@ function MemberLayout({ currentUser, onLogoutClick }: MemberLayoutProps) {
 }
  
 export default MemberLayout
-  
-
+ 

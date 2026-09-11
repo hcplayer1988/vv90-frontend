@@ -3,10 +3,14 @@ import { useOutletContext } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import {
   deleteMitglied,
+  type Einladung,
   inviteMitglied,
+  listEinladungen,
   listMitglieder,
   listRollen,
   reaktiviereMitglied,
+  resendEinladung,
+  revokeEinladung,
   updateMitglied,
   type Mitglied,
   type MitgliedPayload,
@@ -60,6 +64,13 @@ function Verwaltung() {
   const [inviteRolle, setInviteRolle] = useState<'mitglied' | 'vorstand' | 'admin'>('mitglied')
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isInviting, setIsInviting] = useState(false)
+ 
+  const [einladungen, setEinladungen] = useState<Einladung[]>([])
+  const [isLoadingEinladungen, setIsLoadingEinladungen] = useState(false)
+  const [pendingRevokeId, setPendingRevokeId] = useState<number | null>(null)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false)
  
   async function loadMitglieder() {
     setIsLoading(true)
@@ -169,6 +180,83 @@ function Verwaltung() {
     }
   }
  
+  async function loadEinladungen() {
+    setIsLoadingEinladungen(true)
+    try {
+      const data = await listEinladungen()
+      setEinladungen(data)
+    } catch {
+      setLoadError('Einladungen konnten nicht geladen werden.')
+    } finally {
+      setIsLoadingEinladungen(false)
+    }
+  }
+ 
+  function openEinladungenTab() {
+    setSubtab('einladungen')
+    if (einladungen.length === 0) {
+      loadEinladungen()
+    }
+  }
+ 
+  async function handleResend(id: number) {
+    setResendMessage(null)
+    try {
+      const updated = await resendEinladung(id)
+      setEinladungen((prev) => prev.map((e) => (e.id === id ? updated : e)))
+      setResendMessage(`Einladung an ${updated.email} wurde erneut verschickt.`)
+    } catch {
+      setLoadError('Einladung konnte nicht erneut verschickt werden.')
+    }
+  }
+ 
+  async function handleConfirmRevoke() {
+    if (pendingRevokeId === null) return
+    try {
+      await revokeEinladung(pendingRevokeId)
+      setEinladungen((prev) => prev.filter((e) => e.id !== pendingRevokeId))
+    } catch {
+      setLoadError('Einladung konnte nicht widerrufen werden.')
+    } finally {
+      setPendingRevokeId(null)
+    }
+  }
+ 
+  function einladungStatus(einladung: Einladung): { label: string; className: string } {
+    if (einladung.verwendet) return { label: 'Verwendet', className: 'verwendet' }
+    if (!einladung.ist_gueltig) return { label: 'Abgelaufen', className: 'abgelaufen' }
+    return { label: 'Offen', className: 'offen' }
+  }
+ 
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+ 
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      prev.size === einladungen.length ? new Set() : new Set(einladungen.map((e) => e.id))
+    )
+  }
+ 
+  async function handleConfirmBulkDelete() {
+    const ids = Array.from(selectedIds)
+    try {
+      await Promise.all(ids.map((id) => revokeEinladung(id)))
+      setEinladungen((prev) => prev.filter((e) => !selectedIds.has(e.id)))
+      setSelectedIds(new Set())
+    } catch {
+      setLoadError('Einige Einladungen konnten nicht gelöscht werden.')
+      loadEinladungen()
+    } finally {
+      setPendingBulkDelete(false)
+    }
+  }
+ 
   async function handleInvite(event: React.FormEvent) {
     event.preventDefault()
     setInviteMessage(null)
@@ -177,6 +265,9 @@ function Verwaltung() {
       await inviteMitglied({ email: inviteEmail, rolle: inviteRolle })
       setInviteMessage({ type: 'success', text: `Einladung an ${inviteEmail} verschickt.` })
       setInviteEmail('')
+      // Liste im Hintergrund neu laden, damit die frische Einladung sofort auftaucht,
+      // ohne dass extra auf den Reiter geklickt werden muss.
+      loadEinladungen()
     } catch (err) {
       const text =
         err instanceof AxiosError && err.response?.data
@@ -211,7 +302,7 @@ function Verwaltung() {
         <button className={subtab === 'mitglieder' ? 'active' : ''} onClick={() => setSubtab('mitglieder')}>
           Mitglieder
         </button>
-        <button className={subtab === 'einladungen' ? 'active' : ''} onClick={() => setSubtab('einladungen')}>
+        <button className={subtab === 'einladungen' ? 'active' : ''} onClick={openEinladungenTab}>
           Einladungen
         </button>
       </div>
@@ -296,13 +387,82 @@ function Verwaltung() {
             </form>
           </div>
  
-          <div className="empty-state">
-            <div className="title">Offene Einladungen einsehen kommt noch</div>
-            <div className="sub">
-              Dafür fehlt aktuell ein Backend-Endpoint, der bestehende Einladungen auflistet - das
-              Versenden oben funktioniert aber schon vollständig.
+          {resendMessage && <p style={{ fontSize: '13px', color: '#1f7d38' }}>{resendMessage}</p>}
+ 
+          {einladungen.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === einladungen.length}
+                  onChange={toggleSelectAll}
+                />
+                Alle auswählen
+              </label>
+              {selectedIds.size > 0 && (
+                <button className="btn-outline" onClick={() => setPendingBulkDelete(true)}>
+                  {selectedIds.size} ausgewählte löschen
+                </button>
+              )}
             </div>
-          </div>
+          )}
+ 
+          {isLoadingEinladungen && <p>Einladungen werden geladen …</p>}
+ 
+          {!isLoadingEinladungen && einladungen.length === 0 && (
+            <div className="empty-state">
+              <div className="title">Noch keine Einladungen verschickt</div>
+              <div className="sub">Sobald eine verschickt wird, taucht sie hier auf.</div>
+            </div>
+          )}
+ 
+          {!isLoadingEinladungen &&
+            einladungen.map((einladung) => {
+              const status = einladungStatus(einladung)
+              return (
+                <div className="table-mobile-row" key={einladung.id}>
+                  <div className="top">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(einladung.id)}
+                        onChange={() => toggleSelect(einladung.id)}
+                        style={{ marginTop: '3px' }}
+                      />
+                      <div>
+                        <div className="name">{einladung.email}</div>
+                      <div className="email">
+                        {einladung.rolle?.name ?? 'keine Rolle'} · eingeladen von {einladung.erstellt_von} am{' '}
+                        {new Date(einladung.erstellt_am).toLocaleDateString('de-DE')}
+                        </div>
+                      </div>
+                    </div>
+                    <span className={`status-tag ${status.className}`}>{status.label}</span>
+                  </div>
+                  <div className="row-actions">
+                    {!einladung.verwendet ? (
+                      <>
+                        <button onClick={() => handleResend(einladung.id)}>Erneut senden</button>
+                        <button className="danger" onClick={() => setPendingRevokeId(einladung.id)}>
+                          Widerrufen
+                        </button>
+                      </>
+                    ) : (
+                      <button className="danger" onClick={() => setPendingRevokeId(einladung.id)}>
+                        Löschen
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
         </div>
       )}
  
@@ -437,11 +597,55 @@ function Verwaltung() {
           </div>
         </div>
       </div>
+ 
+      {/* ===== Einladung widerrufen/löschen - Bestätigung ===== */}
+      <div className={`modal-overlay ${pendingRevokeId !== null ? 'open' : ''}`}>
+        <div className="modal-box">
+          {(() => {
+            const target = einladungen.find((e) => e.id === pendingRevokeId)
+            const isUsed = target?.verwendet ?? false
+            return (
+              <>
+                <h3>{isUsed ? 'Einladung löschen?' : 'Einladung widerrufen?'}</h3>
+                <p>
+                  {isUsed
+                    ? 'Der Eintrag wird endgültig aus der Liste entfernt.'
+                    : 'Der Link in der bereits verschickten E-Mail wird damit ungültig.'}
+                </p>
+                <div className="modal-actions">
+                  <button className="cancel" onClick={() => setPendingRevokeId(null)}>
+                    Abbrechen
+                  </button>
+                  <button className="confirm" onClick={handleConfirmRevoke}>
+                    {isUsed ? 'Löschen' : 'Widerrufen'}
+                  </button>
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      </div>
+      {/* ===== Mehrere Einladungen loeschen - Bestaetigung ===== */}
+      <div className={`modal-overlay ${pendingBulkDelete ? 'open' : ''}`}>
+        <div className="modal-box">
+          <h3>{selectedIds.size} Einladung{selectedIds.size === 1 ? '' : 'en'} löschen?</h3>
+          <p>
+            Bei noch offenen Einladungen wird damit auch der Link in der bereits verschickten
+            E-Mail ungültig. Das kann nicht rückgängig gemacht werden.
+          </p>
+          <div className="modal-actions">
+            <button className="cancel" onClick={() => setPendingBulkDelete(false)}>
+              Abbrechen
+            </button>
+            <button className="confirm" onClick={handleConfirmBulkDelete}>
+              Löschen
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
  
 export default Verwaltung
  
-
-

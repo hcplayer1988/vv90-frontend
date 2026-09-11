@@ -71,6 +71,32 @@ export async function listRollen(): Promise<Rolle[]> {
   return response.data
 }
  
+export interface Einladung {
+  id: number
+  email: string
+  rolle: { id: number; name: string } | null
+  erstellt_von: string
+  erstellt_am: string
+  verwendet: boolean
+  ist_gueltig: boolean
+}
+ 
+export async function listEinladungen(): Promise<Einladung[]> {
+  const response = await api.get<Einladung[]>('/accounts/einladungen/')
+  return response.data
+}
+ 
+/** Resends the invite email with a fresh token and reset 7-day validity window. */
+export async function resendEinladung(id: number): Promise<Einladung> {
+  const response = await api.post<Einladung>(`/accounts/einladungen/${id}/erneut_senden/`)
+  return response.data
+}
+ 
+/** Revokes an invite - deletes it, so its token becomes unusable. */
+export async function revokeEinladung(id: number): Promise<void> {
+  await api.delete(`/accounts/einladungen/${id}/`)
+}
+  
 
 
 

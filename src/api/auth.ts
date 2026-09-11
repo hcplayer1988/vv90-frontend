@@ -10,6 +10,8 @@ export interface LoggedInUser {
   email: string
   username: string
   rollen?: Rolle[]
+  // NEU: absolute URL zum Profilbild, oder null/undefined wenn keins gesetzt ist.
+  avatar?: string | null
 }
  
 export interface LoginPayload {
@@ -77,6 +79,8 @@ export interface FullProfil extends LoggedInUser {
   geburtstag: string | null
   full_name: string
   full_address: string
+  // NEU: absolute URL zum hochgeladenen Profilbild, oder null wenn keins gesetzt ist.
+  avatar: string | null
 }
  
 /** Fetches the full profile (address, birthday etc.), not just the minimal
@@ -90,6 +94,25 @@ export async function getMyProfile(): Promise<FullProfil> {
  *  stay read-only for the user themselves, see UserSerializer on the backend). */
 export async function updateMyProfile(payload: ProfilPayload): Promise<FullProfil> {
   const response = await api.patch<FullProfil>('/accounts/me/', payload)
+  return response.data
+}
+ 
+/**
+ * NEU: Uploads a new avatar image for the logged-in user via the same
+ * PATCH /accounts/me/ endpoint, but as multipart/form-data instead of JSON
+ * (the backend's DRF parsers accept both automatically). Passing a FormData
+ * instance to axios would normally make it set the correct multipart
+ * Content-Type with boundary itself - but our shared `api` instance has
+ * 'Content-Type': 'application/json' set as a fixed default header, which
+ * overrides that auto-detection. So this call explicitly unsets it, which
+ * lets axios fall back to its own FormData handling for just this request.
+ */
+export async function uploadAvatar(file: File): Promise<FullProfil> {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  const response = await api.patch<FullProfil>('/accounts/me/', formData, {
+    headers: { 'Content-Type': undefined },
+  })
   return response.data
 }
  
