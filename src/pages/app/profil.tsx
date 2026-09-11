@@ -62,6 +62,10 @@ function Profil() {
         ort: data.ort,
         geburtstag: data.geburtstag ?? '',
       })
+      // E-Mail-Feld im Zugangsdaten-Formular mit der aktuellen Adresse
+      // vorbelegen - die meisten werden hier nur das Passwort aendern wollen,
+      // die Passwort-Felder selbst bleiben bewusst leer.
+      setCredentialsForm((prev) => ({ ...prev, new_email: data.email }))
     } catch {
       setLoadError('Profil konnte nicht geladen werden.')
     } finally {
@@ -113,7 +117,13 @@ function Profil() {
     setCredentialsSuccess(null)
  
     const { current_password, new_email, new_password, confirm_new_password } = credentialsForm
-    if (!new_email && !new_password) {
+    // Die E-Mail ist mit der aktuellen Adresse vorbefuellt (Komfort fuer den
+    // haeufigen Fall "nur Passwort aendern") - zaehlt hier also nur als
+    // echte Aenderung, wenn sie sich tatsaechlich vom aktuellen Stand
+    // unterscheidet. Sonst wuerde ein reiner Passwort-Wechsel faelschlich
+    // auch einen E-Mail-Bestaetigungslink an die (unveraenderte) Adresse ausloesen.
+    const emailChanged = profil !== null && new_email.trim() !== profil.email
+    if (!emailChanged && !new_password) {
       setCredentialsError('Gib eine neue E-Mail-Adresse oder ein neues Passwort an.')
       return
     }
@@ -122,7 +132,7 @@ function Profil() {
     try {
       const response = await changeCredentials({
         current_password,
-        ...(new_email ? { new_email } : {}),
+        ...(emailChanged ? { new_email: new_email.trim() } : {}),
         ...(new_password ? { new_password, confirm_new_password } : {}),
       })
       // Backend liefert je nach Fall eine unterschiedliche Meldung zurueck:
@@ -131,7 +141,7 @@ function Profil() {
       // Die zeigen wir 1:1 an, statt sie mit einem eigenen Text zu ueberschreiben -
       // so bleibt sichtbar, dass eine E-Mail-Aenderung noch NICHT sofort wirksam ist.
       setCredentialsSuccess(response.detail)
-      setCredentialsForm(EMPTY_CREDENTIALS_FORM)
+      setCredentialsForm({ ...EMPTY_CREDENTIALS_FORM, new_email: profil?.email ?? '' })
       // Absichtlich KEIN lokales Update von profil.email mehr: die Aenderung
       // ist ja noch gar nicht aktiv, bis der Bestaetigungslink geklickt wurde -
       // die Anzeige soll also bewusst die bisherige E-Mail zeigen.
@@ -259,6 +269,7 @@ function Profil() {
                 <input
                   type="email"
                   value={credentialsForm.new_email}
+                  autoComplete="off"
                   onChange={(e) => setCredentialsForm({ ...credentialsForm, new_email: e.target.value })}
                 />
               </div>
@@ -266,16 +277,19 @@ function Profil() {
                 label="Neues Passwort (optional)"
                 value={credentialsForm.new_password}
                 onChange={(value) => setCredentialsForm({ ...credentialsForm, new_password: value })}
+                autoComplete="off"
               />
               <PasswordInput
                 label="Neues Passwort bestätigen"
                 value={credentialsForm.confirm_new_password}
                 onChange={(value) => setCredentialsForm({ ...credentialsForm, confirm_new_password: value })}
+                autoComplete="off"
               />
               <PasswordInput
                 label="Aktuelles Passwort (zur Bestätigung erforderlich)"
                 value={credentialsForm.current_password}
                 onChange={(value) => setCredentialsForm({ ...credentialsForm, current_password: value })}
+                autoComplete="off"
                 required
               />
  
@@ -298,7 +312,7 @@ function Profil() {
 }
  
 export default Profil
-  
+ 
 
 
 
