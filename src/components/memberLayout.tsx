@@ -20,6 +20,11 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/app/termine', label: 'Termine', icon: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4' },
   { path: '/app/forum', label: 'Forum', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
   {
+    path: '/app/dateien',
+    label: 'Dateien',
+    icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  },
+  {
     path: '/app/verwaltung',
     label: 'Verwaltung',
     vorstandOnly: true,
@@ -153,4 +158,4 @@ function MemberLayout({ currentUser, onLogoutClick }: MemberLayoutProps) {
 }
  
 export default MemberLayout
- 
+  
