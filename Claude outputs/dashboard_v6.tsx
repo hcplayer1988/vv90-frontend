@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { listAlleTermine, type Termin } from '../../api/termine'
 import { listEinladungen } from '../../api/accounts'
 import { listBeitraege, type Beitrag } from '../../api/forum'
@@ -54,7 +54,9 @@ function initialenVon(name: string): string {
  * "noch keine Beiträge" empty state. Deliberate simplification: it only
  * lists new Beiträge, not individual Kommentare - there's no cross-thread
  * "recent comments" endpoint yet, so a real activity feed across both
- * would need a new backend endpoint.
+ * would need a new backend endpoint. Each entry is clickable and navigates
+ * straight to that post's thread page, same as a card on the Forum
+ * overview itself.
  *
  * On narrow containers the feed only shows the first 3 entries (kept short
  * via CSS, see .dashboard-forum-feed below) - from 480px container width
@@ -69,6 +71,7 @@ function initialenVon(name: string): string {
 function Dashboard() {
   const { currentUser } = useOutletContext<{ currentUser: LoggedInUser }>()
   const isVorstand = hasRole(currentUser, 'vorstand') || hasRole(currentUser, 'admin')
+  const navigate = useNavigate()
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [isLoadingTermine, setIsLoadingTermine] = useState(true)
@@ -220,7 +223,12 @@ function Dashboard() {
           ) : (
             <div className="dashboard-forum-feed">
               {beitraege.map((beitrag) => (
-                <div className="feed-item" key={beitrag.id}>
+                <div
+                  className="feed-item"
+                  key={beitrag.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/app/forum/${beitrag.id}`)}
+                >
                   <div className="feed-avatar">{initialenVon(beitrag.autor)}</div>
                   <div>
                     <div className="feed-text">
