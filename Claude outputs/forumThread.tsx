@@ -18,9 +18,9 @@ import {
   type Kommentar,
 } from "../../api/forum";
 import { hasRole, type LoggedInUser } from "../../api/auth";
- 
+
 type OutletContext = { currentUser: LoggedInUser };
- 
+
 function timeAgo(iso: string): string {
   const diffMs = Math.max(0, Date.now() - new Date(iso).getTime());
   const minutes = Math.floor(diffMs / 60000);
@@ -31,11 +31,11 @@ function timeAgo(iso: string): string {
   const days = Math.floor(hours / 24);
   return `vor ${days} Tag${days === 1 ? "" : "en"}`;
 }
- 
+
 function initials(nameOrEmail: string): string {
   return nameOrEmail.slice(0, 2).toUpperCase();
 }
- 
+
 /**
  * ForumThread: dedicated full-page view of one Beitrag and its complete
  * discussion - the classic forum layout (original post highlighted at the
@@ -56,14 +56,14 @@ function ForumThread() {
   const navigate = useNavigate();
   const isModerator =
     hasRole(currentUser, "vorstand") || hasRole(currentUser, "admin");
- 
+
   const [beitrag, setBeitrag] = useState<Beitrag | null>(null);
   const [topLevelComments, setTopLevelComments] = useState<Kommentar[]>([]);
   const [totalTopLevelCount, setTotalTopLevelCount] = useState(0);
   const [antworten, setAntworten] = useState<Kommentar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
- 
+
   const [newCommentText, setNewCommentText] = useState("");
   const [replyingToId, setReplyingToId] = useState<number | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
@@ -72,13 +72,13 @@ function ForumThread() {
     number | null
   >(null);
   const [pendingDeletePost, setPendingDeletePost] = useState(false);
- 
+
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [collapsedReplyIds, setCollapsedReplyIds] = useState<Set<number>>(
     new Set(),
   );
- 
+
   function toggleReplies(topLevelId: number) {
     setCollapsedReplyIds((prev) => {
       const next = new Set(prev);
@@ -87,7 +87,7 @@ function ForumThread() {
       return next;
     });
   }
- 
+
   /** Fetches one page of top-level comments and stores it, without
    *  touching the post or the replies. Used for page navigation and after
    *  edits/deletes that only affect the currently viewed page. */
@@ -97,7 +97,7 @@ function ForumThread() {
     setTotalTopLevelCount(data.count);
     setCurrentPage(page);
   }
- 
+
   /** Reloads both the current top-level page and all replies - used after
    *  a vote/edit/delete, since either array might be affected and it's not
    *  worth tracking precisely which one for a low-traffic club forum. */
@@ -110,7 +110,7 @@ function ForumThread() {
     setTopLevelComments(topLevelData.results);
     setTotalTopLevelCount(topLevelData.count);
   }
- 
+
   async function loadThread() {
     setIsLoading(true);
     setLoadError(null);
@@ -122,7 +122,7 @@ function ForumThread() {
       ]);
       setBeitrag(beitragData);
       setAntworten(antwortenData);
- 
+
       // Jump straight to the last page, like before - the newest top-level
       // comments are what you want to see first when opening a thread.
       const letzteSeite = Math.max(1, Math.ceil(ersteSeite.count / pageSize));
@@ -145,7 +145,7 @@ function ForumThread() {
       setIsLoading(false);
     }
   }
- 
+
   useEffect(() => {
     // loadThread only closes over beitragId, which is already listed below -
     // it's safe to omit it from the dependency array (it would just be
@@ -154,7 +154,7 @@ function ForumThread() {
     loadThread();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [beitragId]);
- 
+
   // If a delete pushes currentPage past the new last page, step back
   // rather than showing an empty page or hitting the backend's
   // page-out-of-range check.
@@ -168,11 +168,11 @@ function ForumThread() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalTopLevelCount, pageSize]);
- 
+
   function canModify(autor: string) {
     return autor === currentUser.email || isModerator;
   }
- 
+
   async function handleSubmitComment() {
     if (!newCommentText.trim()) return;
     try {
@@ -184,7 +184,7 @@ function ForumThread() {
       });
       setNewCommentText("");
       setReplyingToId(null);
- 
+
       if (wasTopLevelComment) {
         // A new top-level comment always lands on the last page - jump
         // there, same as the old client-side behavior.
@@ -204,7 +204,7 @@ function ForumThread() {
       setLoadError("Kommentar konnte nicht gespeichert werden.");
     }
   }
- 
+
   async function handleVote(kommentarId: number, typ: "like" | "dislike") {
     try {
       await bewerteKommentar(kommentarId, typ);
@@ -213,12 +213,12 @@ function ForumThread() {
       setLoadError("Bewertung konnte nicht gespeichert werden.");
     }
   }
- 
+
   function startEditComment(kommentar: Kommentar) {
     setEditingCommentId(kommentar.id);
     setEditCommentText(kommentar.text);
   }
- 
+
   async function handleSaveCommentEdit() {
     if (editingCommentId === null) return;
     try {
@@ -229,7 +229,7 @@ function ForumThread() {
       setLoadError("Kommentar konnte nicht aktualisiert werden.");
     }
   }
- 
+
   async function handleConfirmDeleteComment() {
     if (pendingDeleteCommentId === null) return;
     try {
@@ -241,7 +241,7 @@ function ForumThread() {
       setPendingDeleteCommentId(null);
     }
   }
- 
+
   async function handleConfirmDeletePost() {
     try {
       await deleteBeitrag(beitragId);
@@ -251,7 +251,7 @@ function ForumThread() {
       setPendingDeletePost(false);
     }
   }
- 
+
   function renderComment(kommentar: Kommentar, isReply: boolean) {
     const isEditing = editingCommentId === kommentar.id;
     return (
@@ -265,7 +265,7 @@ function ForumThread() {
           <span className="name">{kommentar.autor}</span>
           <span className="time">· {timeAgo(kommentar.erstellt_am)}</span>
         </div>
- 
+
         {isEditing ? (
           <div style={{ marginTop: "8px" }}>
             <input
@@ -289,7 +289,7 @@ function ForumThread() {
         ) : (
           <p style={{ fontSize: "14px", margin: "8px 0" }}>{kommentar.text}</p>
         )}
- 
+
         <div className="post-footer">
           <button
             className="btn-mini"
@@ -339,7 +339,7 @@ function ForumThread() {
       </div>
     );
   }
- 
+
   if (isLoading) return <p>Thread wird geladen …</p>;
   if (loadError || !beitrag)
     return (
@@ -347,10 +347,10 @@ function ForumThread() {
         {loadError ?? "Beitrag nicht gefunden."}
       </p>
     );
- 
+
   const totalPages = Math.max(1, Math.ceil(totalTopLevelCount / pageSize));
   const kommentareGesamt = totalTopLevelCount + antworten.length;
- 
+
   function renderPaginationButtons() {
     if (totalPages <= 1) return null;
     return (
@@ -393,7 +393,7 @@ function ForumThread() {
       </div>
     );
   }
- 
+
   return (
     <div>
       <Link
@@ -407,7 +407,7 @@ function ForumThread() {
       >
         ← Zurück zur Übersicht
       </Link>
- 
+
       {/* ===== Ursprungsbeitrag ===== */}
       <div className="member-card" style={{ marginBottom: "20px" }}>
         {beitrag.kategorie && (
@@ -440,7 +440,7 @@ function ForumThread() {
           {beitrag.titel}
         </h1>
         <p style={{ fontSize: "15px", lineHeight: 1.6 }}>{beitrag.text}</p>
- 
+
         {canModify(beitrag.autor) && (
           <div className="row-actions">
             <button
@@ -452,7 +452,7 @@ function ForumThread() {
           </div>
         )}
       </div>
- 
+
       {/* ===== Kommentare ===== */}
       <h3
         style={{
@@ -465,7 +465,7 @@ function ForumThread() {
       >
         {kommentareGesamt} Kommentar{kommentareGesamt === 1 ? "" : "e"}
       </h3>
- 
+
       {kommentareGesamt === 0 && (
         <p
           style={{
@@ -477,7 +477,7 @@ function ForumThread() {
           Noch keine Kommentare – schreib den ersten.
         </p>
       )}
- 
+
       {totalTopLevelCount > 0 && (
         <div
           style={{
@@ -518,9 +518,9 @@ function ForumThread() {
           </span>
         </div>
       )}
- 
+
       {renderPaginationButtons()}
- 
+
       {topLevelComments.map((top) => {
         const replies = antworten.filter((k) => k.antwort_auf === top.id);
         const repliesCollapsed = collapsedReplyIds.has(top.id);
@@ -543,9 +543,9 @@ function ForumThread() {
           </div>
         );
       })}
- 
+
       {renderPaginationButtons()}
- 
+
       {/* ===== Neuer Kommentar / Antwort ===== */}
       <div className="member-card" style={{ marginTop: "16px" }}>
         {replyingToId && (
@@ -580,7 +580,7 @@ function ForumThread() {
           </button>
         </div>
       </div>
- 
+
       {/* ===== Kommentar löschen ===== */}
       <div
         className={`modal-overlay ${pendingDeleteCommentId !== null ? "open" : ""}`}
@@ -601,7 +601,7 @@ function ForumThread() {
           </div>
         </div>
       </div>
- 
+
       {/* ===== Beitrag löschen ===== */}
       <div className={`modal-overlay ${pendingDeletePost ? "open" : ""}`}>
         <div className="modal-box">
@@ -626,6 +626,5 @@ function ForumThread() {
     </div>
   );
 }
- 
+
 export default ForumThread;
- 

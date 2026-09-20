@@ -45,7 +45,7 @@ function Home() {
             <circle cx="8.5" cy="9.5" r="1.5" />
             <path d="M21 15l-5-5-9 9" />
           </svg>
-          <span>Platzhalter für Vereinsbild</span>
+          <img src=""></img>
         </div>
       </section>
     </>

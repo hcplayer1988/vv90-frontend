@@ -14,9 +14,9 @@ import {
 } from '../../api/termine'
 import { hasRole, type LoggedInUser } from '../../api/auth'
 import { occursOnDay } from '../../utils/terminRecurrence'
- 
+
 type OutletContext = { currentUser: LoggedInUser }
- 
+
 const TYP_LABELS: Record<TerminTyp, string> = {
   spielplan: 'Spielplan',
   mitgliederversammlung: 'Mitgliederversammlung',
@@ -24,7 +24,7 @@ const TYP_LABELS: Record<TerminTyp, string> = {
   training: 'Training',
   sonstiges: 'Sonstiges',
 }
- 
+
 // CSS class per type for the colored calendar dots (see .cal-dot.* in global.css)
 const TYP_DOT_CLASS: Record<TerminTyp, string> = {
   spielplan: 'spielplan',
@@ -33,7 +33,7 @@ const TYP_DOT_CLASS: Record<TerminTyp, string> = {
   training: 'training',
   sonstiges: 'versammlung',
 }
- 
+
 const FILTERS: { key: 'alle' | TerminTyp; label: string }[] = [
   { key: 'alle', label: 'Alle' },
   { key: 'training', label: 'Training' },
@@ -41,7 +41,7 @@ const FILTERS: { key: 'alle' | TerminTyp; label: string }[] = [
   { key: 'turnier', label: 'Turnier' },
   { key: 'mitgliederversammlung', label: 'Versammlung' },
 ]
- 
+
 const EMPTY_FORM = {
   titel: '',
   typ: 'training' as TerminTyp,
@@ -53,7 +53,7 @@ const EMPTY_FORM = {
   wiederholung_abstand: 1,
   wiederholung_einheit: 'wochen' as WiederholungEinheit,
 }
- 
+
 function formatDate(iso: string) {
   const date = new Date(iso)
   return {
@@ -62,7 +62,7 @@ function formatDate(iso: string) {
     time: date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
   }
 }
- 
+
 /** Builds a Monday-first 6-week grid for the given month, including the
  *  trailing/leading days from adjacent months needed to fill full weeks. */
 function buildMonthGrid(monthDate: Date): Date[] {
@@ -70,7 +70,7 @@ function buildMonthGrid(monthDate: Date): Date[] {
   const month = monthDate.getMonth()
   const firstOfMonth = new Date(year, month, 1)
   const firstWeekday = (firstOfMonth.getDay() + 6) % 7 // 0 = Monday
- 
+
   const gridStart = new Date(year, month, 1 - firstWeekday)
   return Array.from({ length: 42 }, (_, i) => {
     const date = new Date(gridStart)
@@ -78,7 +78,7 @@ function buildMonthGrid(monthDate: Date): Date[] {
     return date
   })
 }
- 
+
 /**
  * Termine: offers both a list and a calendar view.
  *
@@ -98,32 +98,32 @@ function buildMonthGrid(monthDate: Date): Date[] {
 function Termine() {
   const { currentUser } = useOutletContext<OutletContext>()
   const isVorstand = hasRole(currentUser, 'vorstand') || hasRole(currentUser, 'admin')
- 
+
   const [termine, setTermine] = useState<Termin[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
- 
+
   const [alleTermine, setAlleTermine] = useState<Termin[]>([])
   const [isLoadingAlle, setIsLoadingAlle] = useState(true)
- 
+
   const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'alle' | TerminTyp>('alle')
   const [view, setView] = useState<'liste' | 'kalender'>('liste')
- 
+
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10)
   const [currentPage, setCurrentPage] = useState(1)
- 
+
   const [calendarMonth, setCalendarMonth] = useState(() => new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
- 
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
- 
+
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
- 
+
   async function loadTermine() {
     setIsLoading(true)
     setLoadError(null)
@@ -141,7 +141,7 @@ function Termine() {
       setIsLoading(false)
     }
   }
- 
+
   async function loadAlleTermine() {
     setIsLoadingAlle(true)
     try {
@@ -153,7 +153,7 @@ function Termine() {
       setIsLoadingAlle(false)
     }
   }
- 
+
   useEffect(() => {
     // Fetching data on mount is the textbook use case for useEffect - the
     // "setState in effect" lint rule flags this pattern generally, but it's
@@ -162,12 +162,12 @@ function Termine() {
     loadTermine()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, filter])
- 
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadAlleTermine()
   }, [])
- 
+
   // If a delete (or a narrower filter) pushes currentPage past the new
   // last page, step back rather than showing an empty page or hitting the
   // backend's page-out-of-range check.
@@ -179,9 +179,9 @@ function Termine() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalCount, pageSize])
- 
+
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
- 
+
   const monthGrid = useMemo(() => buildMonthGrid(calendarMonth), [calendarMonth])
   const eventsByDay = useMemo(() => {
     const map = new Map<string, Termin[]>()
@@ -193,7 +193,7 @@ function Termine() {
     })
     return map
   }, [monthGrid, alleTermine])
- 
+
   function openCreateModal(prefillDate?: Date) {
     setEditingId(null)
     setForm(
@@ -204,7 +204,7 @@ function Termine() {
     setFormError(null)
     setIsModalOpen(true)
   }
- 
+
   function openEditModal(termin: Termin) {
     setEditingId(termin.id)
     setForm({
@@ -221,11 +221,11 @@ function Termine() {
     setFormError(null)
     setIsModalOpen(true)
   }
- 
+
   async function handleSave() {
     setFormError(null)
     setIsSaving(true)
- 
+
     const payload: TerminPayload = {
       titel: form.titel,
       typ: form.typ,
@@ -237,7 +237,7 @@ function Termine() {
       wiederholung_abstand: form.ist_wiederkehrend ? form.wiederholung_abstand : null,
       wiederholung_einheit: form.ist_wiederkehrend ? form.wiederholung_einheit : '',
     }
- 
+
     try {
       if (editingId) {
         await updateTermin(editingId, payload)
@@ -261,7 +261,7 @@ function Termine() {
       setIsSaving(false)
     }
   }
- 
+
   async function handleConfirmDelete() {
     if (pendingDeleteId === null) return
     try {
@@ -273,7 +273,7 @@ function Termine() {
       setPendingDeleteId(null)
     }
   }
- 
+
   function goToPreviousMonth() {
     setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
     setSelectedDay(null)
@@ -282,9 +282,9 @@ function Termine() {
     setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
     setSelectedDay(null)
   }
- 
+
   const selectedDayEvents = selectedDay ? eventsByDay.get(selectedDay.toDateString()) ?? [] : []
- 
+
   function renderPaginationButtons() {
     if (totalPages <= 1) return null
     return (
@@ -319,7 +319,7 @@ function Termine() {
       </div>
     )
   }
- 
+
   return (
     <div>
       <div className="view-header">
@@ -329,7 +329,7 @@ function Termine() {
           <p>Trainings, Spiele, Turniere und Vereinstermine an einem Ort.</p>
         </div>
       </div>
- 
+
       <div className="view-switch">
         <button className={view === 'liste' ? 'active' : ''} onClick={() => setView('liste')}>
           Liste
@@ -338,9 +338,9 @@ function Termine() {
           Kalender
         </button>
       </div>
- 
+
       {loadError && <p style={{ color: '#c8102e' }}>{loadError}</p>}
- 
+
       {/* ===== LISTENANSICHT ===== */}
       {view === 'liste' && (
         <>
@@ -349,7 +349,7 @@ function Termine() {
               + Neuer Termin
             </button>
           )}
- 
+
           <div className="filter-chips">
             {FILTERS.map((f) => (
               <button
@@ -364,7 +364,7 @@ function Termine() {
               </button>
             ))}
           </div>
- 
+
           <div
             style={{
               display: 'flex',
@@ -395,9 +395,9 @@ function Termine() {
               </select>
             </label>
           </div>
- 
+
           {isLoading && <p>Termine werden geladen …</p>}
- 
+
           {!isLoading && termine.length === 0 && (
             <div className="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -408,9 +408,9 @@ function Termine() {
               <div className="sub">Sobald einer angelegt wird, taucht er hier auf.</div>
             </div>
           )}
- 
+
           {renderPaginationButtons()}
- 
+
           <div className="grid">
             {termine.map((termin) => {
               const { day, month, time } = formatDate(termin.start)
@@ -443,16 +443,16 @@ function Termine() {
               )
             })}
           </div>
- 
+
           {renderPaginationButtons()}
         </>
       )}
- 
+
       {/* ===== KALENDERANSICHT ===== */}
       {view === 'kalender' && (
         <div>
           {isLoadingAlle && <p>Termine werden geladen …</p>}
- 
+
           {!isLoadingAlle && (
             <>
               <div className="cal-nav">
@@ -462,7 +462,7 @@ function Termine() {
                 </span>
                 <button onClick={goToNextMonth}>›</button>
               </div>
- 
+
               <div className="cal-grid">
                 {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((d) => (
                   <div className="cal-weekday" key={d}>
@@ -474,7 +474,7 @@ function Termine() {
                   const dayEvents = eventsByDay.get(day.toDateString()) ?? []
                   const isSelected = selectedDay?.toDateString() === day.toDateString()
                   const clickable = isCurrentMonth && (dayEvents.length > 0 || isVorstand)
- 
+
                   return (
                     <div
                       key={day.toISOString()}
@@ -500,7 +500,7 @@ function Termine() {
                   )
                 })}
               </div>
- 
+
               <div className="cal-legend">
                 <span>
                   <span className="cal-dot training"></span>Training
@@ -515,10 +515,10 @@ function Termine() {
                   <span className="cal-dot turnier"></span>Turnier
                 </span>
               </div>
- 
+
               <div className="cal-day-details">
                 {!selectedDay && <p className="placeholder">Tag mit Punkt anklicken, um die Termine zu sehen.</p>}
- 
+
                 {selectedDay && (
                   <>
                     {selectedDayEvents.map((termin) => (
@@ -547,13 +547,13 @@ function Termine() {
                         </div>
                       </div>
                     ))}
- 
+
                     {selectedDayEvents.length === 0 && (
                       <p className="placeholder">
                         Noch keine Termine am {selectedDay.toLocaleDateString('de-DE')}.
                       </p>
                     )}
- 
+
                     {isVorstand && (
                       <button className="btn-outline add-day-btn" onClick={() => openCreateModal(selectedDay)}>
                         + Termin für den {selectedDay.toLocaleDateString('de-DE')} anlegen
@@ -566,17 +566,17 @@ function Termine() {
           )}
         </div>
       )}
- 
+
       {/* ===== Anlegen/Bearbeiten-Modal ===== */}
       <div className={`modal-overlay ${isModalOpen ? 'open' : ''}`}>
         <div className="modal-box wide">
           <h3>{editingId ? 'Termin bearbeiten' : 'Neuen Termin anlegen'}</h3>
- 
+
           <div className="field-row">
             <label>Titel</label>
             <input type="text" value={form.titel} onChange={(e) => setForm({ ...form, titel: e.target.value })} />
           </div>
- 
+
           <div className="field-two">
             <div className="field-row">
               <label>Typ</label>
@@ -593,7 +593,7 @@ function Termine() {
               <input type="text" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
             </div>
           </div>
- 
+
           <div className="field-two">
             <div className="field-row">
               <label>Start</label>
@@ -612,7 +612,7 @@ function Termine() {
               />
             </div>
           </div>
- 
+
           <div className="field-row">
             <label>Beschreibung (optional)</label>
             <input
@@ -621,7 +621,7 @@ function Termine() {
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
             />
           </div>
- 
+
           <label className="checkbox-row">
             <input
               type="checkbox"
@@ -630,7 +630,7 @@ function Termine() {
             />
             Wiederkehrender Termin
           </label>
- 
+
           {form.ist_wiederkehrend && (
             <div className="field-two">
               <div className="field-row">
@@ -655,9 +655,9 @@ function Termine() {
               </div>
             </div>
           )}
- 
+
           {formError && <p style={{ color: '#c8102e', fontSize: '13px' }}>{formError}</p>}
- 
+
           <div className="modal-actions" style={{ marginTop: '8px' }}>
             <button className="cancel" onClick={() => setIsModalOpen(false)}>
               Abbrechen
@@ -668,7 +668,7 @@ function Termine() {
           </div>
         </div>
       </div>
- 
+
       {/* ===== Löschen-Bestätigung ===== */}
       <div className={`modal-overlay ${pendingDeleteId !== null ? 'open' : ''}`}>
         <div className="modal-box">
@@ -687,11 +687,5 @@ function Termine() {
     </div>
   )
 }
- 
+
 export default Termine
-   
-
-
-
-
-

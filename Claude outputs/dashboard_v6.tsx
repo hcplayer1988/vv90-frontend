@@ -5,13 +5,13 @@ import { listEinladungen } from '../../api/accounts'
 import { listBeitraege, type Beitrag } from '../../api/forum'
 import { hasRole, type LoggedInUser } from '../../api/auth'
 import { findNextOccurrence } from '../../utils/terminRecurrence'
- 
+
 function formatOccurrence(date: Date, termin: Termin) {
   const dateLabel = date.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
   const time = new Date(termin.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
   return { dateLabel, time }
 }
- 
+
 /** Turns an ISO timestamp into a relative label ("vor 2 Stunden", "gestern"
  *  etc.), as shown in the forum feed on the dashboard. */
 function relativeZeit(iso: string): string {
@@ -25,7 +25,7 @@ function relativeZeit(iso: string): string {
   if (diffTage < 7) return `vor ${diffTage} Tagen`
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
- 
+
 function initialenVon(name: string): string {
   const teile = name.trim().split(/\s+/)
   const initialen = teile
@@ -34,7 +34,7 @@ function initialenVon(name: string): string {
     .join('')
   return initialen || '?'
 }
- 
+
 /**
  * Dashboard: landing page of the member area. The two Termin-cards
  * (training/match) are wired up to the real /api/termine/ data via
@@ -69,15 +69,15 @@ function initialenVon(name: string): string {
 function Dashboard() {
   const { currentUser } = useOutletContext<{ currentUser: LoggedInUser }>()
   const isVorstand = hasRole(currentUser, 'vorstand') || hasRole(currentUser, 'admin')
- 
+
   const [termine, setTermine] = useState<Termin[]>([])
   const [isLoadingTermine, setIsLoadingTermine] = useState(true)
- 
+
   const [offeneEinladungen, setOffeneEinladungen] = useState<number | null>(null)
- 
+
   const [beitraege, setBeitraege] = useState<Beitrag[]>([])
   const [isLoadingBeitraege, setIsLoadingBeitraege] = useState(true)
- 
+
   useEffect(() => {
     async function loadTermine() {
       try {
@@ -91,9 +91,10 @@ function Dashboard() {
         setIsLoadingTermine(false)
       }
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTermine()
   }, [])
- 
+
   useEffect(() => {
     if (!isVorstand) return
     async function loadEinladungen() {
@@ -104,9 +105,10 @@ function Dashboard() {
         // Card shows "–" instead of a wrong number in that case.
       }
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadEinladungen()
   }, [isVorstand])
- 
+
   useEffect(() => {
     async function loadBeitraege() {
       try {
@@ -122,12 +124,13 @@ function Dashboard() {
         setIsLoadingBeitraege(false)
       }
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBeitraege()
   }, [])
- 
+
   const nextTraining = findNextOccurrence(termine, 'training')
   const nextSpiel = findNextOccurrence(termine, 'spielplan')
- 
+
   return (
     <div>
       <div className="view-header">
@@ -137,7 +140,7 @@ function Dashboard() {
           <p>Das ist gerade los bei VV90.</p>
         </div>
       </div>
- 
+
       <div className={`grid ${isVorstand ? 'three' : 'two'}`} style={{ marginBottom: '16px' }}>
         <div className="member-card stat-card">
           <span className="label">Nächstes Training</span>
@@ -155,7 +158,7 @@ function Dashboard() {
             <span className="sub">Kein Training geplant</span>
           )}
         </div>
- 
+
         <div className="member-card stat-card">
           <span className="label">Nächstes Spiel</span>
           {isLoadingTermine ? (
@@ -172,7 +175,7 @@ function Dashboard() {
             <span className="sub">Kein Spiel geplant</span>
           )}
         </div>
- 
+
         {isVorstand && (
           <div className="member-card stat-card">
             <span className="label">Offene Einladungen</span>
@@ -181,7 +184,7 @@ function Dashboard() {
           </div>
         )}
       </div>
- 
+
       <div className="grid two">
         <div className="member-card">
           <div className="section-title-row">
@@ -230,7 +233,7 @@ function Dashboard() {
             </div>
           )}
         </div>
- 
+
         <div className="member-card">
           <div className="section-title-row">
             <h3>Wer ist online</h3>
@@ -255,6 +258,5 @@ function Dashboard() {
     </div>
   )
 }
- 
+
 export default Dashboard
- 
