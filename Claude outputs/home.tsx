@@ -31,7 +31,7 @@ function Home() {
             Abpfiff noch trifft.
           </p>
         </div>
- 
+
         <div className="hero-ball">
           <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
             <circle cx="100" cy="100" r="96" fill="none" stroke="#ffffff" strokeWidth="1.5" opacity={0.25} />
@@ -44,9 +44,9 @@ function Home() {
           </svg>
         </div>
       </section>
- 
+
       <div className="divider-bar"></div>
- 
+
       <section className="image-placeholder-section">
         <div className="header-photo">
           <img src="/header_secret.webp" alt="Das VV90-Team beim Volleyball" />
@@ -55,8 +55,5 @@ function Home() {
     </>
   )
 }
- 
+
 export default Home
- 
-
-
