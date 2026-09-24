@@ -1,5 +1,6 @@
 import api from "./client";
 import type { PaginatedResponse } from "./pagination";
+import type { Umfrage } from "./umfragen";
  
 export interface Beitrag {
   id: number;
@@ -10,6 +11,7 @@ export interface Beitrag {
   erstellt_am: string;
   aktualisiert_am: string;
   anzahl_kommentare: number;
+  umfrage: Umfrage | null;
 }
  
 export type BeitragPayload = Partial<
@@ -36,9 +38,9 @@ export type KommentarPayload = {
  
 // Matches the backend's ordering_fields on BeitragViewSet.
 export type BeitraegeSortierung =
-  | "-erstellt_am" // neueste zuerst (Standard)
-  | "erstellt_am" // aelteste zuerst
-  | "-anzahl_kommentare"; // meistdiskutiert
+  | "-erstellt_am" 
+  | "erstellt_am" 
+  | "-anzahl_kommentare"; 
  
 export interface ListBeitraegeParams {
   page?: number;

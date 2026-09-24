@@ -22,9 +22,6 @@
     -webkit-font-smoothing: antialiased;
   }
  
-  /* React rendert alles in #root - das ist jetzt der direkte Elternteil von
-     Navbar/main/Footer, deshalb muss der Flex-Container hier sitzen statt
-     auf body (das im HTML-Mockup noch direktes Elternteil war). */
   #root {
     display: flex;
     flex-direction: column;
@@ -220,9 +217,6 @@
     .nav-links { transition: none; }
   }
  
-  /* ================================================================ */
-  /* MEMBER AREA (logged-in section: topbar, sidebar, tabbar, cards)  */
-  /* ================================================================ */
   :root {
     --member-topbar-h: 58px;
     --member-tabbar-h: 62px;
@@ -300,9 +294,6 @@
     .member-main .main-inner { padding: 32px; }
   }
  
-  /* ================================================================ */
-  /* MEMBER AREA CONTENT (cards, filters, forms, modal, calendar)     */
-  /* ================================================================ */
   .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
   .view-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
   .view-header .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--crest-red); display: block; margin-bottom: 6px; }
@@ -394,6 +385,9 @@
   .row-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .row-actions button { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid #ddd; background: #fff; min-width: 100px; cursor: pointer; }
   .row-actions button.danger { color: var(--crest-red-deep); border-color: rgba(200,16,46,.4); }
+
+  .row-actions .btn-primary { background: var(--crest-red); border-color: var(--crest-red); color: #fff; }
+  .row-actions .btn-primary:hover { background: var(--crest-red-deep); }
  
   .status-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
   .status-tag.offen { background: rgba(47,168,79,.12); color: #1f7d38; }
@@ -441,24 +435,15 @@
     .fab { display: none; }
   }
  
-  /* ================================================================ */
-  /* CONTAINER QUERIES: reagieren auf die verfuegbare Breite des        */
-  /* Inhaltsbereichs selbst (nicht auf die Fensterbreite) - loest das   */
-  /* Problem, dass die Sidebar bei viewport-basierten Breakpoints nicht */
-  /* mitgerechnet wird.                                                */
-  /* ================================================================ */
   @container (min-width: 480px) {
     .grid.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   }
   @container (min-width: 720px) {
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
- 
-  /* Sicherheits-Fix: verhindert, dass eine einzelne Zeile (z.B. Name +
-     Zeitstempel in der Mitglieder-Liste) bei wenig Platz aus ihrer Karte
-     herausragt, statt sauber zu kuerzen. */
+
   .member-row { flex-wrap: wrap; }
   .member-row .m-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  
+ 
 
 

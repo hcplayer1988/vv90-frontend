@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import { listAlleTermine, type Termin } from '../../api/termine'
 import { listEinladungen } from '../../api/accounts'
 import { listBeitraege, type Beitrag } from '../../api/forum'
+import { listUmfragen, type Umfrage } from '../../api/umfragen'
 import { hasRole, type LoggedInUser } from '../../api/auth'
 import { findNextOccurrence } from '../../utils/terminRecurrence'
  
@@ -12,8 +13,6 @@ function formatOccurrence(date: Date, termin: Termin) {
   return { dateLabel, time }
 }
  
-/** Turns an ISO timestamp into a relative label ("vor 2 Stunden", "gestern"
- *  etc.), as shown in the forum feed on the dashboard. */
 function relativeZeit(iso: string): string {
   const diffMinuten = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
   if (diffMinuten < 1) return 'gerade eben'
@@ -35,39 +34,7 @@ function initialenVon(name: string): string {
   return initialen || '?'
 }
  
-/**
- * Dashboard: landing page of the member area. The two Termin-cards
- * (training/match) are wired up to the real /api/termine/ data via
- * findNextOccurrence(), which accounts for recurring events. Uses
- * listAlleTermine() (the unpaginated ?alle=1 endpoint, same one the
- * Termine-Kalender view uses) rather than the now-paginated listTermine(),
- * since finding the next occurrence needs the complete dataset, not just
- * one page.
- *
- * "Offene Einladungen" now uses the real invitations list instead of a
- * hardcoded "2" - and only loads/shows that card for Vorstand/Admin, since
- * the backend endpoint itself is Vorstand-only (a regular member would get
- * a 403 there anyway, and the number isn't meaningful to them).
- *
- * "Neu im Forum" shows the most recent real Beiträge (newest first, the
- * backend's default ordering) instead of fake demo entries, with a proper
- * "noch keine Beiträge" empty state. Deliberate simplification: it only
- * lists new Beiträge, not individual Kommentare - there's no cross-thread
- * "recent comments" endpoint yet, so a real activity feed across both
- * would need a new backend endpoint. Each entry is clickable and navigates
- * straight to that post's thread page, same as a card on the Forum
- * overview itself.
- *
- * On narrow containers the feed only shows the first 3 entries (kept short
- * via CSS, see .dashboard-forum-feed below) - from 480px container width
- * upward (the same @container breakpoint global.css already uses to turn
- * .grid.two two-column) all loaded entries are shown, and if that's more
- * than fits comfortably, the card itself scrolls (max-height + overflow-y)
- * instead of pushing the whole page down.
- *
- * "Wer ist online" is still demo data for now - real online-status
- * tracking wasn't part of this fix, it's a separate, bigger feature.
- */
+
 function Dashboard() {
   const { currentUser } = useOutletContext<{ currentUser: LoggedInUser }>()
   const isVorstand = hasRole(currentUser, 'vorstand') || hasRole(currentUser, 'admin')
@@ -81,15 +48,16 @@ function Dashboard() {
   const [beitraege, setBeitraege] = useState<Beitrag[]>([])
   const [isLoadingBeitraege, setIsLoadingBeitraege] = useState(true)
  
+  const [umfragen, setUmfragen] = useState<Umfrage[]>([])
+  const [isLoadingUmfragen, setIsLoadingUmfragen] = useState(true)
+ 
   useEffect(() => {
     async function loadTermine() {
       try {
         const data = await listAlleTermine()
         setTermine(data)
       } catch {
-        // Silently falls back to "Kein Termin geplant" below - the
-        // dashboard isn't the place for a loud error, the Termine page
-        // itself shows one if needed.
+        //
       } finally {
         setIsLoadingTermine(false)
       }
@@ -104,7 +72,7 @@ function Dashboard() {
         const data = await listEinladungen()
         setOffeneEinladungen(data.filter((e) => !e.verwendet && e.ist_gueltig).length)
       } catch {
-        // Card shows "–" instead of a wrong number in that case.
+        //
       }
     }
     loadEinladungen()
@@ -113,14 +81,10 @@ function Dashboard() {
   useEffect(() => {
     async function loadBeitraege() {
       try {
-        // page_size=20 is plenty - the card itself is visually capped
-        // (3 entries on narrow containers, a scrollable 340px area from
-        // 480px container width up), and "-erstellt_am" (newest first) is
-        // already the backend's default ordering.
         const data = await listBeitraege({ page_size: 20, ordering: '-erstellt_am' })
         setBeitraege(data.results)
       } catch {
-        // Just stays empty - shows "Noch keine Beiträge" in that case.
+        //
       } finally {
         setIsLoadingBeitraege(false)
       }
@@ -128,8 +92,27 @@ function Dashboard() {
     loadBeitraege()
   }, [])
  
+  useEffect(() => {
+    async function loadUmfragen() {
+      try {
+        const data = await listUmfragen('allgemein')
+        setUmfragen(data)
+      } catch {
+        //
+      } finally {
+        setIsLoadingUmfragen(false)
+      }
+    }
+    loadUmfragen()
+  }, [])
+ 
   const nextTraining = findNextOccurrence(termine, 'training')
   const nextSpiel = findNextOccurrence(termine, 'spielplan')
+ 
+  const offeneAbstimmungen = umfragen.filter((u) => !u.geschlossen)
+  const nichtBeantwortet = offeneAbstimmungen.filter(
+    (u) => !u.optionen.some((o) => o.meine_stimme),
+  )
  
   return (
     <div>
@@ -141,7 +124,7 @@ function Dashboard() {
         </div>
       </div>
  
-      <div className={`grid ${isVorstand ? 'three' : 'two'}`} style={{ marginBottom: '16px' }}>
+      <div className="grid three" style={{ marginBottom: '16px' }}>
         <div className="member-card stat-card">
           <span className="label">Nächstes Training</span>
           {isLoadingTermine ? (
@@ -176,6 +159,28 @@ function Dashboard() {
           )}
         </div>
  
+        <div
+          className="member-card stat-card"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/app/umfragen')}
+        >
+          <span className="label">Offene Abstimmungen</span>
+          {isLoadingUmfragen ? (
+            <span className="sub">Lädt …</span>
+          ) : (
+            <>
+              <span className="value">{offeneAbstimmungen.length}</span>
+              <span className="sub">
+                {offeneAbstimmungen.length === 0
+                  ? 'aktuell keine offen'
+                  : nichtBeantwortet.length === 0
+                    ? 'von dir alle beantwortet'
+                    : `${nichtBeantwortet.length} noch nicht beantwortet`}
+              </span>
+            </>
+          )}
+        </div>
+ 
         {isVorstand && (
           <div className="member-card stat-card">
             <span className="label">Offene Einladungen</span>
@@ -190,15 +195,6 @@ function Dashboard() {
           <div className="section-title-row">
             <h3>Neu im Forum</h3>
           </div>
-          {/* Scoped, minimal CSS instead of a global rule in global.css.
-              Mobile-first like the rest of global.css, and deliberately a
-              @container query instead of @media: the member area reacts
-              everywhere to the available width of .main-inner
-              (container-type: inline-size), not the viewport width - the
-              same 480px value at which .grid.two next to it already goes
-              two-column. Default: only the first 3 entries (short, for
-              mobile/narrow containers). From 480px container width up:
-              all entries, with the card scrolling itself if needed. */}
           <style>{`
             .dashboard-forum-feed .feed-item:nth-child(n + 4) {
               display: none;
@@ -265,7 +261,7 @@ function Dashboard() {
 }
  
 export default Dashboard
- 
+  
 
 
 

@@ -12,13 +12,14 @@ interface NavItem {
   label: string
   end?: boolean
   vorstandOnly?: boolean
-  icon: string // SVG path data, reused for both sidebar and tabbar icons
+  icon: string
 }
  
 const NAV_ITEMS: NavItem[] = [
   { path: '/app', label: 'Übersicht', end: true, icon: 'M3 11l9-8 9 8M5 10v10h14V10' },
   { path: '/app/termine', label: 'Termine', icon: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4' },
   { path: '/app/forum', label: 'Forum', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
+  { path: '/app/umfragen', label: 'Umfragen', icon: 'M4 20V10M12 20V4M20 20v-6' },
   {
     path: '/app/dateien',
     label: 'Dateien',
@@ -34,14 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
  
-/**
- * MemberLayout: the app shell for the logged-in area. Renders the topbar
- * (brand + avatar dropdown) and, depending on screen width via CSS, either
- * a sidebar (desktop) or a bottom tab bar (mobile) - both share the same
- * NAV_ITEMS list so they never get out of sync. The actual page content
- * for the current route is rendered via <Outlet /> (React Router's slot
- * for nested routes), set up in the next step in App.tsx.
- */
+
 function MemberLayout({ currentUser, onLogoutClick }: MemberLayoutProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -50,7 +44,6 @@ function MemberLayout({ currentUser, onLogoutClick }: MemberLayoutProps) {
   const visibleItems = NAV_ITEMS.filter((item) => !item.vorstandOnly || isVorstand)
   const initials = currentUser.email.slice(0, 2).toUpperCase()
  
-  // Closes the dropdown when clicking anywhere outside of it.
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

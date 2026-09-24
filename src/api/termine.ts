@@ -1,5 +1,6 @@
 import api from './client'
 import type { PaginatedResponse } from './pagination'
+import type { Umfrage } from './umfragen'
  
 export type TerminTyp = 'spielplan' | 'mitgliederversammlung' | 'turnier' | 'training' | 'sonstiges'
 export type WiederholungEinheit = 'tage' | 'wochen' | 'monate' | ''
@@ -67,3 +68,39 @@ export async function deleteTermin(id: number): Promise<void> {
   await api.delete(`/termine/${id}/`)
 }
  
+// ===== Doodle-artige Terminabstimmungen =====
+// Erstellen, Abstimmen und Löschen laufen über die geteilten
+// /api/umfragen/-Endpunkte (siehe api/umfragen.ts) - hier stehen nur die
+// beiden Termine-spezifischen Funktionen: die gefilterte Liste (nur die
+// eigenständigen Abstimmungen ohne Beitrag) und die Umwandlung einer
+// Gewinner-Option in einen echten Termin.
+ 
+export interface AbstimmungUmwandelnPayload {
+  option: number
+  titel: string
+  typ: TerminTyp
+  ort?: string
+  beschreibung?: string
+}
+ 
+/** Fetches ALL standalone (Doodle-style) Termine-Abstimmungen in one
+ *  unpaginated call - the backend's TermineAbstimmungViewSet has no
+ *  pagination_class, same reasoning as e.g. listAntworten in api/forum.ts. */
+export async function listTermineAbstimmungen(): Promise<Umfrage[]> {
+  const response = await api.get<Umfrage[]>('/termine/abstimmungen/')
+  return response.data
+}
+ 
+/** Vorstand-only: turns the given winning Option of a standalone Umfrage
+ *  into a real Termin (using the Option's start/ende) and closes the
+ *  Umfrage so it can no longer be voted on. */
+export async function umwandelnAbstimmung(
+  umfrageId: number,
+  payload: AbstimmungUmwandelnPayload,
+): Promise<Umfrage> {
+  const response = await api.post<Umfrage>(`/termine/abstimmungen/${umfrageId}/umwandeln/`, payload)
+  return response.data
+}
+ 
+
+

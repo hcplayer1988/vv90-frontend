@@ -17,6 +17,12 @@ import {
   type Beitrag,
   type Kommentar,
 } from "../../api/forum";
+import {
+  erstelleUmfrage,
+  loescheUmfrage,
+  stimmeAbgeben,
+  type Umfrage,
+} from "../../api/umfragen";
 import { hasRole, type LoggedInUser } from "../../api/auth";
  
 type OutletContext = { currentUser: LoggedInUser };
@@ -72,6 +78,12 @@ function ForumThread() {
     number | null
   >(null);
   const [pendingDeletePost, setPendingDeletePost] = useState(false);
+ 
+  const [showUmfrageForm, setShowUmfrageForm] = useState(false);
+  const [umfrageFrage, setUmfrageFrage] = useState("");
+  const [umfrageMehrfachauswahl, setUmfrageMehrfachauswahl] = useState(false);
+  const [umfrageOptionen, setUmfrageOptionen] = useState<string[]>(["", ""]);
+  const [pendingDeleteUmfrage, setPendingDeleteUmfrage] = useState(false);
  
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -252,6 +264,82 @@ function ForumThread() {
     }
   }
  
+  function updateUmfrageOption(index: number, value: string) {
+    setUmfrageOptionen((prev) => prev.map((o, i) => (i === index ? value : o)));
+  }
+ 
+  function addUmfrageOption() {
+    setUmfrageOptionen((prev) => [...prev, ""]);
+  }
+ 
+  function removeUmfrageOption(index: number) {
+    setUmfrageOptionen((prev) => prev.filter((_, i) => i !== index));
+  }
+ 
+  async function handleCreateUmfrage() {
+    const optionen = umfrageOptionen.map((o) => o.trim()).filter(Boolean);
+    if (!umfrageFrage.trim() || optionen.length < 2) {
+      setLoadError("Eine Umfrage braucht eine Frage und mindestens 2 Optionen.");
+      return;
+    }
+    try {
+      const neueUmfrage = await erstelleUmfrage({
+        frage: umfrageFrage.trim(),
+        mehrfachauswahl: umfrageMehrfachauswahl,
+        kontext: "forum",
+        beitrag: beitragId,
+        optionen: optionen.map((text) => ({ text })),
+      });
+      setBeitrag((prev) => (prev ? { ...prev, umfrage: neueUmfrage } : prev));
+      setShowUmfrageForm(false);
+      setUmfrageFrage("");
+      setUmfrageMehrfachauswahl(false);
+      setUmfrageOptionen(["", ""]);
+    } catch {
+      setLoadError("Umfrage konnte nicht erstellt werden.");
+    }
+  }
+ 
+  /** Sendet die neue Gesamtauswahl an /abstimmen/ statt nur die geklickte
+   *  Option - siehe die Doku am Backend-Endpoint (UmfrageViewSet.abstimmen)
+   *  fuer die Begruendung. Bei einer Einzelauswahl-Umfrage ersetzt ein Klick
+   *  die bisherige Auswahl komplett, bei Mehrfachauswahl schaltet er nur die
+   *  geklickte Option dazu/weg. */
+  async function handleVoteUmfrage(umfrage: Umfrage, optionId: number) {
+    const bereitsGewaehlt = umfrage.optionen.find(
+      (o) => o.id === optionId,
+    )?.meine_stimme;
+    let neueAuswahl: number[];
+    if (umfrage.mehrfachauswahl) {
+      const aktuelle = umfrage.optionen
+        .filter((o) => o.meine_stimme)
+        .map((o) => o.id);
+      neueAuswahl = bereitsGewaehlt
+        ? aktuelle.filter((id) => id !== optionId)
+        : [...aktuelle, optionId];
+    } else {
+      neueAuswahl = bereitsGewaehlt ? [] : [optionId];
+    }
+    try {
+      const aktualisiert = await stimmeAbgeben(umfrage.id, neueAuswahl);
+      setBeitrag((prev) => (prev ? { ...prev, umfrage: aktualisiert } : prev));
+    } catch {
+      setLoadError("Stimme konnte nicht gespeichert werden.");
+    }
+  }
+ 
+  async function handleConfirmDeleteUmfrage() {
+    if (!beitrag?.umfrage) return;
+    try {
+      await loescheUmfrage(beitrag.umfrage.id);
+      setBeitrag((prev) => (prev ? { ...prev, umfrage: null } : prev));
+    } catch {
+      setLoadError("Umfrage konnte nicht gelöscht werden.");
+    } finally {
+      setPendingDeleteUmfrage(false);
+    }
+  }
+ 
   function renderComment(kommentar: Kommentar, isReply: boolean) {
     const isEditing = editingCommentId === kommentar.id;
     return (
@@ -350,6 +438,8 @@ function ForumThread() {
  
   const totalPages = Math.max(1, Math.ceil(totalTopLevelCount / pageSize));
   const kommentareGesamt = totalTopLevelCount + antworten.length;
+  const istThemenersteller = beitrag.autor === currentUser.email;
+  const umfrage = beitrag.umfrage;
  
   function renderPaginationButtons() {
     if (totalPages <= 1) return null;
@@ -452,6 +542,181 @@ function ForumThread() {
           </div>
         )}
       </div>
+ 
+      {/* ===== Umfrage ===== */}
+      {umfrage ? (
+        <div className="member-card" style={{ marginBottom: "20px" }}>
+          <div className="section-title-row">
+            <h3>{umfrage.frage}</h3>
+          </div>
+          {umfrage.mehrfachauswahl && (
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--muted)",
+                marginTop: "-6px",
+                marginBottom: "10px",
+              }}
+            >
+              Mehrfachauswahl möglich
+            </p>
+          )}
+          {umfrage.optionen.map((option) => {
+            const gesamtStimmen = umfrage.optionen.reduce(
+              (summe, o) => summe + o.anzahl_stimmen,
+              0,
+            );
+            const prozent =
+              gesamtStimmen > 0
+                ? Math.round((option.anzahl_stimmen / gesamtStimmen) * 100)
+                : 0;
+            return (
+              <button
+                key={option.id}
+                onClick={() => handleVoteUmfrage(umfrage, option.id)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  border: option.meine_stimme
+                    ? "1.5px solid var(--crest-red)"
+                    : "1.5px solid #ddd",
+                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  marginBottom: "8px",
+                  background: option.meine_stimme
+                    ? "rgba(200,16,46,0.06)"
+                    : "#fff",
+                  cursor: "pointer",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: `${prozent}%`,
+                    background: "rgba(200,16,46,0.08)",
+                    zIndex: 0,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "relative",
+                    zIndex: 1,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                  }}
+                >
+                  <span>
+                    {option.meine_stimme ? "✓ " : ""}
+                    {option.text}
+                  </span>
+                  <span style={{ color: "var(--muted)" }}>
+                    {option.anzahl_stimmen} ({prozent}%)
+                  </span>
+                </div>
+                {option.waehler.length > 0 && (
+                  <div
+                    style={{
+                      position: "relative",
+                      zIndex: 1,
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {option.waehler.map((w) => w.name).join(", ")}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+          <p style={{ fontSize: "11px", color: "var(--muted)", marginTop: "6px" }}>
+            Erstellt von {umfrage.ersteller}
+          </p>
+          {(istThemenersteller || isModerator) && (
+            <div className="row-actions">
+              <button
+                className="danger"
+                onClick={() => setPendingDeleteUmfrage(true)}
+              >
+                Umfrage löschen
+              </button>
+            </div>
+          )}
+        </div>
+      ) : istThemenersteller ? (
+        showUmfrageForm ? (
+          <div className="member-card" style={{ marginBottom: "20px" }}>
+            <div className="field-row">
+              <label>Frage</label>
+              <input
+                type="text"
+                value={umfrageFrage}
+                onChange={(e) => setUmfrageFrage(e.target.value)}
+              />
+            </div>
+            {umfrageOptionen.map((option, index) => (
+              <div className="field-row" key={index}>
+                <label>Option {index + 1}</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => updateUmfrageOption(index, e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {umfrageOptionen.length > 2 && (
+                    <button
+                      className="btn-mini"
+                      onClick={() => removeUmfrageOption(index)}
+                    >
+                      Entfernen
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <button
+              className="btn-mini"
+              onClick={addUmfrageOption}
+              style={{ marginBottom: "12px" }}
+            >
+              + Option hinzufügen
+            </button>
+            <div className="checkbox-row">
+              <input
+                type="checkbox"
+                id="umfrage-mehrfachauswahl"
+                checked={umfrageMehrfachauswahl}
+                onChange={(e) => setUmfrageMehrfachauswahl(e.target.checked)}
+              />
+              <label htmlFor="umfrage-mehrfachauswahl">
+                Mehrfachauswahl erlauben
+              </label>
+            </div>
+            <div className="row-actions">
+              <button className="btn-primary" onClick={handleCreateUmfrage}>
+                Umfrage erstellen
+              </button>
+              <button onClick={() => setShowUmfrageForm(false)}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className="btn-outline"
+            style={{ marginBottom: "20px" }}
+            onClick={() => setShowUmfrageForm(true)}
+          >
+            + Umfrage zu diesem Thread hinzufügen
+          </button>
+        )
+      ) : null}
  
       {/* ===== Kommentare ===== */}
       <h3
@@ -623,9 +888,32 @@ function ForumThread() {
           </div>
         </div>
       </div>
+ 
+      {/* ===== Umfrage löschen ===== */}
+      <div className={`modal-overlay ${pendingDeleteUmfrage ? "open" : ""}`}>
+        <div className="modal-box">
+          <h3>Umfrage löschen?</h3>
+          <p>
+            Alle Stimmen gehen dabei verloren. Das kann nicht rückgängig
+            gemacht werden.
+          </p>
+          <div className="modal-actions">
+            <button
+              className="cancel"
+              onClick={() => setPendingDeleteUmfrage(false)}
+            >
+              Abbrechen
+            </button>
+            <button className="confirm" onClick={handleConfirmDeleteUmfrage}>
+              Löschen
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
  
 export default ForumThread;
  
+
